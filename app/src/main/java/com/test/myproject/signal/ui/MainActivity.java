@@ -4,7 +4,6 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -29,12 +28,14 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextView tvNetworkType, tvCurrentSpeed, tvTestState;
+    private TextView tvNetworkType, tvCurrentSpeed, tvTestState, tvSpeedUnit;
     private TextView tvPing, tvDownload, tvUpload, tvDuration, tvConclusion, tvDateTime;
     private ProgressBar progressBarTest;
-    private Button btnStartTest;
+
+    // Замінено Button на LiquidButtonView
+    private LiquidButtonView btnStartTest;
     private BubbleView bubbleView;
-    private SpeedometerView speedometerView; // Додано спідометр
+    private SpeedometerView speedometerView;
     private LineChart speedChart;
     private GridLayout gridResults;
 
@@ -47,6 +48,12 @@ public class MainActivity extends AppCompatActivity {
     private float chartTimeIndex = 0;
     private Handler clockHandler;
     private Runnable clockRunnable;
+
+    // Змінні для динамічного таймера тривалості тесту
+    private Handler durationHandler;
+    private Runnable durationRunnable;
+    private long testStartTime = 0;
+
     private double finalDownload = 0, finalUpload = 0;
 
     @Override
@@ -88,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
         tvDateTime = findViewById(R.id.tvDateTime);
         tvNetworkType = findViewById(R.id.tvNetworkType);
         tvCurrentSpeed = findViewById(R.id.tvCurrentSpeed);
+        tvSpeedUnit = findViewById(R.id.tvSpeedUnit); // Додано для оновлення одиниць
         tvTestState = findViewById(R.id.tvTestState);
         progressBarTest = findViewById(R.id.progressBarTest);
 
@@ -97,11 +105,25 @@ public class MainActivity extends AppCompatActivity {
         tvDuration = findViewById(R.id.tvDuration);
         tvConclusion = findViewById(R.id.tvConclusion);
 
+        // Ініціалізація нашої нової кнопки
         btnStartTest = findViewById(R.id.btnStartTest);
         bubbleView = findViewById(R.id.bubbleView);
-        speedometerView = findViewById(R.id.speedometerView); // Ініціалізація спідометра
+        speedometerView = findViewById(R.id.speedometerView);
         speedChart = findViewById(R.id.speedChart);
         gridResults = findViewById(R.id.gridResults);
+
+        // Ініціалізація таймера тривалості
+        durationHandler = new Handler(Looper.getMainLooper());
+        durationRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isTesting && testStartTime > 0) {
+                    double seconds = (System.currentTimeMillis() - testStartTime) / 1000.0;
+                    tvDuration.setText(String.format(Locale.US, "%.1f с", seconds));
+                    durationHandler.postDelayed(this, 100); // Оновлюємо кожні 100 мс
+                }
+            }
+        };
     }
 
     private void startClockWidget() {
@@ -163,9 +185,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void startTest() {
         isTesting = true;
-        bubbleView.startAnimation();
-        btnStartTest.setText("СТОП");
-        btnStartTest.setTextColor(Color.parseColor("#FFDDDD")); // Змінюємо колір тексту під час тесту
+        bubbleView.startAnimation(); // Бульбашки на фоні
+        btnStartTest.setTestingState(true); // Водяна пульсація самої кнопки
 
         gridResults.animate().alpha(0.4f).setDuration(600).start();
         speedChart.animate().alpha(0.4f).setDuration(600).start();
@@ -176,10 +197,15 @@ public class MainActivity extends AppCompatActivity {
         tvUpload.setText("-- Мбіт/с");
         tvDuration.setText("0.0 с");
         tvCurrentSpeed.setText("0.0");
+        tvSpeedUnit.setText("Мбіт/с");
         progressBarTest.setProgress(0);
         tvConclusion.setText("Тестування...");
 
-        speedometerView.reset(); // Скидаємо стрілку
+        // Запуск динамічного таймера
+        testStartTime = System.currentTimeMillis();
+        durationHandler.post(durationRunnable);
+
+        speedometerView.reset();
         chartEntries.clear();
         chartTimeIndex = 0;
         updateChartData();
@@ -194,9 +220,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDownloadProgress(double mbps, int progressPercent) {
-                tvTestState.setText("Перевірка завантаження...");
+                tvTestState.setText("⬇ Перевірка завантаження...");
+                tvSpeedUnit.setText("Мбіт/с (⬇)");
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
-                speedometerView.setSpeed((float) mbps); // Анімуємо стрілку
+                speedometerView.setSpeed((float) mbps);
                 progressBarTest.setProgress(progressPercent / 2);
                 addChartEntry(mbps);
             }
@@ -205,16 +232,18 @@ public class MainActivity extends AppCompatActivity {
             public void onDownloadFinished(double finalMbps) {
                 finalDownload = finalMbps;
                 tvDownload.setText(String.format(Locale.US, "%.1f Мбіт/с", finalMbps));
-                speedometerView.reset(); // Скидаємо стрілку перед Upload
+                speedometerView.reset();
+                tvCurrentSpeed.setText("0.0"); // Скидаємо перед вивантаженням
                 chartEntries.clear();
                 chartTimeIndex = 0;
             }
 
             @Override
             public void onUploadProgress(double mbps, int progressPercent) {
-                tvTestState.setText("Перевірка вивантаження...");
+                tvTestState.setText("⬆ Перевірка вивантаження...");
+                tvSpeedUnit.setText("Мбіт/с (⬆)");
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
-                speedometerView.setSpeed((float) mbps); // Анімуємо стрілку
+                speedometerView.setSpeed((float) mbps);
                 progressBarTest.setProgress(50 + (progressPercent / 2));
                 addChartEntry(mbps);
             }
@@ -254,13 +283,17 @@ public class MainActivity extends AppCompatActivity {
     private void finishTestUI() {
         isTesting = false;
         bubbleView.stopAnimation();
-        btnStartTest.setText("СТАРТ");
-        btnStartTest.setTextColor(Color.WHITE);
+        btnStartTest.setTestingState(false); // Повертаємо кнопку в звичайний стан
+
+        // Зупиняємо таймер
+        durationHandler.removeCallbacks(durationRunnable);
+
         tvTestState.setText("Завершено");
         progressBarTest.setProgress(100);
 
-        speedometerView.reset(); // Опускаємо стрілку
+        speedometerView.reset();
         tvCurrentSpeed.setText("0.0");
+        tvSpeedUnit.setText("Мбіт/с");
 
         gridResults.animate().alpha(1f).setDuration(1000).start();
         speedChart.animate().alpha(1f).setDuration(1000).start();
@@ -271,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (clockHandler != null) clockHandler.removeCallbacks(clockRunnable);
+        if (durationHandler != null) durationHandler.removeCallbacks(durationRunnable);
         if (networkAnalyzer != null) networkAnalyzer.stopMonitoring();
     }
 }

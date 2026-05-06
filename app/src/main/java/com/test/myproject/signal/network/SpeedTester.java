@@ -5,6 +5,7 @@ import android.os.Looper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -15,12 +16,20 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okio.BufferedSink;
 
 public class SpeedTester {
 
     private final OkHttpClient client;
     private final Handler mainHandler;
     private boolean isCancelled = false;
+
+    // Внутрішній клас для розрахунку Rolling Average (Ковзного середнього)
+    private static class SpeedDataPoint {
+        long timestamp;
+        long bytes;
+        SpeedDataPoint(long t, long b) { timestamp = t; bytes = b; }
+    }
 
     public interface SpeedTestCallback {
         void onPingResult(long pingMs);
@@ -60,7 +69,7 @@ public class SpeedTester {
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
-        String url = "https://speed.cloudflare.com/__down?bytes=25000000";
+        String url = "https://speed.cloudflare.com/__down?bytes=50000000"; // 50MB для кращого тесту
         Request request = new Request.Builder().url(url).build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -80,45 +89,59 @@ public class SpeedTester {
                 mainHandler.post(() -> callback.onPingResult(pingMs));
 
                 InputStream is = response.body().byteStream();
-                byte[] buffer = new byte[8192];
+                byte[] buffer = new byte[16384]; // Більший буфер
 
                 long totalBytesRead = 0;
                 long startTime = System.currentTimeMillis();
                 long lastReportTime = startTime;
-                long bytesSinceLastReport = 0;
+
+                LinkedList<SpeedDataPoint> rollingWindow = new LinkedList<>();
+                double displaySpeed = 0;
 
                 int bytesRead;
-                double smoothedSpeed = 0; // Для плавності даних
-
                 while ((bytesRead = is.read(buffer)) != -1 && !isCancelled) {
                     totalBytesRead += bytesRead;
-                    bytesSinceLastReport += bytesRead;
                     long currentTime = System.currentTimeMillis();
 
-                    // Оновлюємо кожні 150 мс для плавної анімації
-                    if (currentTime - lastReportTime >= 150) {
-                        double deltaSec = (currentTime - lastReportTime) / 1000.0;
-                        double currentMbps = ((bytesSinceLastReport * 8.0) / 1_000_000.0) / deltaSec;
+                    rollingWindow.add(new SpeedDataPoint(currentTime, totalBytesRead));
 
-                        // Згладжування (Low-pass filter), щоб швидкість не "стрибала" занадто різко
-                        smoothedSpeed = smoothedSpeed == 0 ? currentMbps : (smoothedSpeed * 0.4 + currentMbps * 0.6);
+                    // Видаляємо дані старіші за 1 секунду
+                    while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
+                        rollingWindow.removeFirst();
+                    }
 
-                        int progress = (int) ((totalBytesRead * 100) / 25000000);
-                        final double reportSpeed = smoothedSpeed;
+                    // Оновлюємо UI кожні 200 мс
+                    if (currentTime - lastReportTime >= 200) {
+                        if (rollingWindow.size() > 1) {
+                            SpeedDataPoint oldest = rollingWindow.getFirst();
+                            SpeedDataPoint newest = rollingWindow.getLast();
 
+                            double deltaSec = (newest.timestamp - oldest.timestamp) / 1000.0;
+                            long deltaBytes = newest.bytes - oldest.bytes;
+
+                            if (deltaSec > 0) {
+                                double instantSpeed = ((deltaBytes * 8.0) / 1_000_000.0) / deltaSec;
+                                // Легке згладжування виключно для візуальної плавності стрілки
+                                displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.7 + instantSpeed * 0.3);
+                            }
+                        }
+
+                        int progress = (int) ((totalBytesRead * 100) / 50000000); // Відсоток від 50МБ
+                        final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onDownloadProgress(reportSpeed, Math.min(progress, 100)));
 
                         lastReportTime = currentTime;
-                        bytesSinceLastReport = 0;
                     }
                 }
-
                 is.close();
                 response.close();
 
-                final double finalSpeed = smoothedSpeed;
+                // Реальна фінальна швидкість = весь об'єм поділений на весь час (найнадійніший метод)
+                double totalTimeSec = (System.currentTimeMillis() - startTime) / 1000.0;
+                double exactFinalSpeed = ((totalBytesRead * 8.0) / 1_000_000.0) / totalTimeSec;
+
                 mainHandler.post(() -> {
-                    callback.onDownloadFinished(finalSpeed);
+                    callback.onDownloadFinished(exactFinalSpeed);
                     onComplete.run();
                 });
             }
@@ -127,42 +150,72 @@ public class SpeedTester {
 
     private void runUploadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__up";
+        final long totalBytes = 20000000; // 20MB для тесту вивантаження
 
-        // Генеруємо 10МБ випадкових даних
-        byte[] payload = new byte[10000000];
-        new Random().nextBytes(payload);
-
-        RequestBody rawBody = RequestBody.create(payload, MediaType.parse("application/octet-stream"));
-
-        final long[] lastReportTime = {System.currentTimeMillis()};
-        final long[] bytesSinceLastReport = {0};
-        final double[] smoothedSpeed = {0};
-        final long startTime = System.currentTimeMillis();
-
-        // Використовуємо наш кастомний ProgressRequestBody
-        ProgressRequestBody progressBody = new ProgressRequestBody(rawBody, (bytesWritten, contentLength) -> {
-            if (isCancelled) return;
-
-            long currentTime = System.currentTimeMillis();
-            long bytesDelta = bytesWritten - bytesSinceLastReport[0];
-
-            if (currentTime - lastReportTime[0] >= 150) {
-                double deltaSec = (currentTime - lastReportTime[0]) / 1000.0;
-                double currentMbps = ((bytesDelta * 8.0) / 1_000_000.0) / deltaSec;
-
-                smoothedSpeed[0] = smoothedSpeed[0] == 0 ? currentMbps : (smoothedSpeed[0] * 0.4 + currentMbps * 0.6);
-
-                int progress = (int) ((bytesWritten * 100) / contentLength);
-                final double reportSpeed = smoothedSpeed[0];
-
-                mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
-
-                lastReportTime[0] = currentTime;
-                bytesSinceLastReport[0] = bytesWritten;
+        // Створюємо кастомний RequestBody, який записує дані шматками (chunks)
+        RequestBody requestBody = new RequestBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("application/octet-stream");
             }
-        });
 
-        Request request = new Request.Builder().url(url).post(progressBody).build();
+            @Override
+            public long contentLength() {
+                return totalBytes;
+            }
+
+            @Override
+            public void writeTo(BufferedSink sink) throws IOException {
+                byte[] chunk = new byte[65536]; // 64KB буфер
+                new Random().nextBytes(chunk); // Генеруємо сміття один раз для швидкодії
+
+                long bytesWritten = 0;
+                long startTime = System.currentTimeMillis();
+                long lastReportTime = startTime;
+
+                LinkedList<SpeedDataPoint> rollingWindow = new LinkedList<>();
+                double displaySpeed = 0;
+
+                while (bytesWritten < totalBytes && !isCancelled) {
+                    long toWrite = Math.min(chunk.length, totalBytes - bytesWritten);
+                    sink.write(chunk, 0, (int) toWrite);
+                    sink.flush(); // Примусово відправляємо в мережу, щоб UI міг фіксувати прогрес поступово
+
+                    bytesWritten += toWrite;
+                    long currentTime = System.currentTimeMillis();
+
+                    rollingWindow.add(new SpeedDataPoint(currentTime, bytesWritten));
+
+                    while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
+                        rollingWindow.removeFirst();
+                    }
+
+                    if (currentTime - lastReportTime >= 200) {
+                        if (rollingWindow.size() > 1) {
+                            SpeedDataPoint oldest = rollingWindow.getFirst();
+                            SpeedDataPoint newest = rollingWindow.getLast();
+
+                            double deltaSec = (newest.timestamp - oldest.timestamp) / 1000.0;
+                            long deltaBytes = newest.bytes - oldest.bytes;
+
+                            if (deltaSec > 0) {
+                                double instantSpeed = ((deltaBytes * 8.0) / 1_000_000.0) / deltaSec;
+                                displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.7 + instantSpeed * 0.3);
+                            }
+                        }
+
+                        int progress = (int) ((bytesWritten * 100) / totalBytes);
+                        final double reportSpeed = displaySpeed;
+                        mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
+
+                        lastReportTime = currentTime;
+                    }
+                }
+            }
+        };
+
+        final long testStartTime = System.currentTimeMillis();
+        Request request = new Request.Builder().url(url).post(requestBody).build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -172,12 +225,12 @@ public class SpeedTester {
 
             @Override
             public void onResponse(Call call, Response response) {
-                double timeInSec = (System.currentTimeMillis() - startTime) / 1000.0;
-                double finalUploadMbps = (payload.length * 8.0 / 1_000_000.0) / timeInSec;
+                double totalTimeSec = (System.currentTimeMillis() - testStartTime) / 1000.0;
+                double exactFinalSpeed = ((totalBytes * 8.0) / 1_000_000.0) / totalTimeSec;
                 response.close();
 
                 mainHandler.post(() -> {
-                    callback.onUploadFinished(finalUploadMbps);
+                    callback.onUploadFinished(exactFinalSpeed);
                     onComplete.run();
                 });
             }
