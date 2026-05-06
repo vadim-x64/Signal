@@ -8,287 +8,281 @@
     android:background="@drawable/gradient_background"
     tools:context=".ui.MainActivity">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+    <!-- HEADER (Завжди прикріплений до верху) -->
+    <TextView
+        android:id="@+id/tvAppTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="40dp"
+        android:text="Signal"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvNetworkType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Підключення: Перевірка..."
+        android:textColor="#92FE9D"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@+id/tvAppTitle"
+        app:layout_constraintTop_toBottomOf="@+id/tvAppTitle" />
+
+    <ImageView
+        android:id="@+id/btnHistory"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginEnd="24dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="8dp"
+        android:src="@drawable/ic_history"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvDateTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:gravity="end"
+        android:text="12:00\n01.01.2024"
+        android:textColor="#B3FFFFFF"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@+id/btnHistory"
+        app:layout_constraintEnd_toStartOf="@+id/btnHistory"
+        app:layout_constraintTop_toTopOf="@+id/btnHistory" />
+
+    <!-- DYNAMIC BODY (Розподіляється рівномірно по екрану) -->
+
+    <FrameLayout
+        android:id="@+id/speedometerContainer"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_marginTop="80dp"
+        app:layout_constraintBottom_toTopOf="@+id/progressBarTest"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvNetworkType">
+
+        <com.test.myproject.signal.ui.SpeedometerView
+            android:id="@+id/speedometerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:animateLayoutChanges="true"
-            android:paddingBottom="32dp">
+            android:layout_height="match_parent">
 
             <TextView
-                android:id="@+id/tvDateTime"
+                android:id="@+id/tvCurrentSpeed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginEnd="16dp"
-                android:gravity="end"
-                android:text="12:00\n01.01.2024"
-                android:textColor="#B3FFFFFF"
-                android:textSize="14sp"
-                app:layout_constraintEnd_toStartOf="@+id/btnHistory"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <!-- Нова кнопка для переходу до графіків -->
-            <ImageView
-                android:id="@+id/btnHistory"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginEnd="24dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="8dp"
-                android:src="@drawable/ic_history"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:tint="#FFFFFF" />
-
-            <TextView
-                android:id="@+id/tvAppTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="24dp"
-                android:text="NetPulse"
+                android:text="0.0"
                 android:textColor="#FFFFFF"
-                android:textSize="28sp"
+                android:textSize="56sp"
                 android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.55" />
 
             <TextView
-                android:id="@+id/tvNetworkType"
+                android:id="@+id/tvSpeedUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Підключення: Перевірка..."
-                android:textColor="#92FE9D"
-                android:textSize="14sp"
-                app:layout_constraintStart_toStartOf="@+id/tvAppTitle"
-                app:layout_constraintTop_toBottomOf="@+id/tvAppTitle" />
-
-            <!-- Блок спідометра -->
-            <FrameLayout
-                android:id="@+id/speedometerContainer"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
-                android:layout_marginTop="32dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvNetworkType">
-
-                <com.test.myproject.signal.ui.SpeedometerView
-                    android:id="@+id/speedometerView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-                <!-- Використовуємо ConstraintLayout для ідеального центрування тексту -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <TextView
-                        android:id="@+id/tvCurrentSpeed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0.0"
-                        android:textColor="#FFFFFF"
-                        android:textSize="56sp"
-                        android:textStyle="bold"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.55" /> <!-- Трохи зміщено вниз через дугу -->
-
-                    <TextView
-                        android:id="@+id/tvSpeedUnit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Мбіт/с"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="16sp"
-                        app:layout_constraintEnd_toEndOf="@+id/tvCurrentSpeed"
-                        app:layout_constraintStart_toStartOf="@+id/tvCurrentSpeed"
-                        app:layout_constraintTop_toBottomOf="@+id/tvCurrentSpeed" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </FrameLayout>
-
-            <ProgressBar
-                android:id="@+id/progressBarTest"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:max="100"
-                android:progress="0"
-                android:progressTint="#00C9FF"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/speedometerContainer" />
-
-            <TextView
-                android:id="@+id/tvTestState"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Очікування"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
-
-            <!-- Блок результатів -->
-            <GridLayout
-                android:id="@+id/gridResults"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="24dp"
-                android:columnCount="2"
-                android:rowCount="2"
-                app:layout_constraintTop_toBottomOf="@+id/tvTestState">
-
-                <!-- ... Вміст карток PING, DOWNLOAD, UPLOAD, DURATION залишається без змін (скопіюй старий код) ... -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_rowWeight="1"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/card_background"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="PING"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tvPing"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-- мс"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_rowWeight="1"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/card_background"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ЗАВАНТАЖЕННЯ"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tvDownload"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-- Мбіт/с"
-                        android:textColor="#92FE9D"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_rowWeight="1"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/card_background"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ВИВАНТАЖЕННЯ"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tvUpload"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-- Мбіт/с"
-                        android:textColor="#00C9FF"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_rowWeight="1"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/card_background"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ЧАС ТЕСТУ"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tvDuration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0.0 с"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-            </GridLayout>
-
-            <TextView
-                android:id="@+id/tvConclusion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/card_background"
-                android:padding="16dp"
-                android:text="Очікування початку тестування..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                app:layout_constraintTop_toBottomOf="@+id/gridResults" />
-
-            <!-- Водяна кнопка БЕЗ BubbleView -->
-            <FrameLayout
-                android:layout_width="160dp"
-                android:layout_height="160dp"
-                android:layout_marginTop="24dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvConclusion">
-
-                <com.test.myproject.signal.ui.LiquidButtonView
-                    android:id="@+id/btnStartTest"
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-                    android:layout_gravity="center"
-                    android:elevation="8dp" />
-            </FrameLayout>
-
+                android:text="Мбіт/с"
+                android:textColor="#B3FFFFFF"
+                android:textSize="16sp"
+                app:layout_constraintEnd_toEndOf="@+id/tvCurrentSpeed"
+                app:layout_constraintStart_toStartOf="@+id/tvCurrentSpeed"
+                app:layout_constraintTop_toBottomOf="@+id/tvCurrentSpeed" />
         </androidx.constraintlayout.widget.ConstraintLayout>
-    </ScrollView>
+    </FrameLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBarTest"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="#00C9FF"
+        app:layout_constraintBottom_toTopOf="@+id/tvTestState"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/speedometerContainer" />
+
+    <TextView
+        android:id="@+id/tvTestState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Очікування"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/gridResults"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
+
+    <GridLayout
+        android:id="@+id/gridResults"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:columnCount="2"
+        android:rowCount="2"
+        app:layout_constraintBottom_toTopOf="@+id/tvConclusion"
+        app:layout_constraintTop_toBottomOf="@+id/tvTestState">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/card_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PING"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tvPing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- мс"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/card_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ЗАВАНТАЖЕННЯ"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tvDownload"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- Мбіт/с"
+                android:textColor="#92FE9D"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/card_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ВИВАНТАЖЕННЯ"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tvUpload"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- Мбіт/с"
+                android:textColor="#00C9FF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/card_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ЧАС ТЕСТУ"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tvDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 с"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </GridLayout>
+
+    <TextView
+        android:id="@+id/tvConclusion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/card_background"
+        android:padding="16dp"
+        android:text="Очікування початку тестування..."
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@+id/btnStartContainer"
+        app:layout_constraintTop_toBottomOf="@+id/gridResults" />
+
+    <!-- FOOTER (Завжди прикріплений до низу) -->
+    <FrameLayout
+        android:id="@+id/btnStartContainer"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="32dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvConclusion">
+
+        <com.test.myproject.signal.ui.LiquidButtonView
+            android:id="@+id/btnStartTest"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:layout_gravity="center"
+            android:elevation="8dp" />
+    </FrameLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
