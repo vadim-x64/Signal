@@ -24,13 +24,29 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:layout_marginEnd="24dp"
+                android:layout_marginEnd="16dp"
                 android:gravity="end"
                 android:text="12:00\n01.01.2024"
                 android:textColor="#B3FFFFFF"
                 android:textSize="14sp"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/btnHistory"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Нова кнопка для переходу до графіків -->
+            <ImageView
+                android:id="@+id/btnHistory"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_history"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="#FFFFFF" />
 
             <TextView
                 android:id="@+id/tvAppTitle"
@@ -58,9 +74,9 @@
             <!-- Блок спідометра -->
             <FrameLayout
                 android:id="@+id/speedometerContainer"
-                android:layout_width="280dp"
-                android:layout_height="280dp"
-                android:layout_marginTop="24dp"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:layout_marginTop="32dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/tvNetworkType">
@@ -70,14 +86,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
 
-                <!-- Цифри поверх спідометра -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:gravity="center"
-                    android:orientation="vertical">
+                <!-- Використовуємо ConstraintLayout для ідеального центрування тексту -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
 
                     <TextView
                         android:id="@+id/tvCurrentSpeed"
@@ -86,7 +98,12 @@
                         android:text="0.0"
                         android:textColor="#FFFFFF"
                         android:textSize="56sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.55" /> <!-- Трохи зміщено вниз через дугу -->
 
                     <TextView
                         android:id="@+id/tvSpeedUnit"
@@ -94,16 +111,19 @@
                         android:layout_height="wrap_content"
                         android:text="Мбіт/с"
                         android:textColor="#B3FFFFFF"
-                        android:textSize="16sp" />
-                </LinearLayout>
+                        android:textSize="16sp"
+                        app:layout_constraintEnd_toEndOf="@+id/tvCurrentSpeed"
+                        app:layout_constraintStart_toStartOf="@+id/tvCurrentSpeed"
+                        app:layout_constraintTop_toBottomOf="@+id/tvCurrentSpeed" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </FrameLayout>
 
-            <!-- Прогрес бар стану тесту -->
             <ProgressBar
                 android:id="@+id/progressBarTest"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="200dp"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:max="100"
                 android:progress="0"
                 android:progressTint="#00C9FF"
@@ -122,17 +142,18 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
 
-            <!-- Блок результатів (Картки) -->
+            <!-- Блок результатів -->
             <GridLayout
                 android:id="@+id/gridResults"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 android:columnCount="2"
                 android:rowCount="2"
                 app:layout_constraintTop_toBottomOf="@+id/tvTestState">
 
+                <!-- ... Вміст карток PING, DOWNLOAD, UPLOAD, DURATION залишається без змін (скопіюй старий код) ... -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -143,14 +164,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="PING"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvPing"
                         android:layout_width="wrap_content"
@@ -171,14 +190,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ЗАВАНТАЖЕННЯ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvDownload"
                         android:layout_width="wrap_content"
@@ -199,14 +216,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ВИВАНТАЖЕННЯ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvUpload"
                         android:layout_width="wrap_content"
@@ -227,14 +242,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ЧАС ТЕСТУ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvDuration"
                         android:layout_width="wrap_content"
@@ -246,43 +259,28 @@
                 </LinearLayout>
             </GridLayout>
 
-            <com.github.mikephil.charting.charts.LineChart
-                android:id="@+id/speedChart"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="8dp"
-                app:layout_constraintTop_toBottomOf="@+id/gridResults" />
-
             <TextView
                 android:id="@+id/tvConclusion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/card_background"
                 android:padding="16dp"
                 android:text="Очікування початку тестування..."
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
-                app:layout_constraintTop_toBottomOf="@+id/speedChart" />
+                app:layout_constraintTop_toBottomOf="@+id/gridResults" />
 
-            <!-- Оновлений контейнер з водяною кнопкою -->
+            <!-- Водяна кнопка БЕЗ BubbleView -->
             <FrameLayout
                 android:layout_width="160dp"
                 android:layout_height="160dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/tvConclusion">
 
-                <!-- Старий BubbleView залишаємо для фонових маленьких бульбашок, що летять вгору -->
-                <com.test.myproject.signal.ui.BubbleView
-                    android:id="@+id/bubbleView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-                <!-- Нова "Жива" кнопка-крапля -->
                 <com.test.myproject.signal.ui.LiquidButtonView
                     android:id="@+id/btnStartTest"
                     android:layout_width="120dp"
