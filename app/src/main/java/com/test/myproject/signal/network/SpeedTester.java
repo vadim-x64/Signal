@@ -5,6 +5,7 @@ import android.os.Looper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -32,7 +33,6 @@ public class SpeedTester {
     }
 
     public SpeedTester() {
-        // Налаштовуємо таймаути для точніших тестів
         client = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
@@ -60,7 +60,6 @@ public class SpeedTester {
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
-        // Завантажуємо файл ~25MB для тесту
         String url = "https://speed.cloudflare.com/__down?bytes=25000000";
         Request request = new Request.Builder().url(url).build();
 
@@ -81,35 +80,43 @@ public class SpeedTester {
                 mainHandler.post(() -> callback.onPingResult(pingMs));
 
                 InputStream is = response.body().byteStream();
-                byte[] buffer = new byte[8192]; // Читаємо по 8КБ
+                byte[] buffer = new byte[8192];
+
                 long totalBytesRead = 0;
                 long startTime = System.currentTimeMillis();
                 long lastReportTime = startTime;
-                int bytesRead;
+                long bytesSinceLastReport = 0;
 
-                double latestMbps = 0;
+                int bytesRead;
+                double smoothedSpeed = 0; // Для плавності даних
 
                 while ((bytesRead = is.read(buffer)) != -1 && !isCancelled) {
                     totalBytesRead += bytesRead;
+                    bytesSinceLastReport += bytesRead;
                     long currentTime = System.currentTimeMillis();
 
-                    // Оновлюємо UI кожні 200 мс
-                    if (currentTime - lastReportTime > 200) {
-                        double timeInSec = (currentTime - startTime) / 1000.0;
-                        latestMbps = (totalBytesRead * 8.0 / 1_000_000.0) / timeInSec;
-                        // Симуляція відсотка (25MB = 25 000 000 байт)
-                        int progress = (int) ((totalBytesRead * 100) / 25000000);
+                    // Оновлюємо кожні 150 мс для плавної анімації
+                    if (currentTime - lastReportTime >= 150) {
+                        double deltaSec = (currentTime - lastReportTime) / 1000.0;
+                        double currentMbps = ((bytesSinceLastReport * 8.0) / 1_000_000.0) / deltaSec;
 
-                        final double reportSpeed = latestMbps;
+                        // Згладжування (Low-pass filter), щоб швидкість не "стрибала" занадто різко
+                        smoothedSpeed = smoothedSpeed == 0 ? currentMbps : (smoothedSpeed * 0.4 + currentMbps * 0.6);
+
+                        int progress = (int) ((totalBytesRead * 100) / 25000000);
+                        final double reportSpeed = smoothedSpeed;
+
                         mainHandler.post(() -> callback.onDownloadProgress(reportSpeed, Math.min(progress, 100)));
+
                         lastReportTime = currentTime;
+                        bytesSinceLastReport = 0;
                     }
                 }
 
                 is.close();
                 response.close();
 
-                final double finalSpeed = latestMbps;
+                final double finalSpeed = smoothedSpeed;
                 mainHandler.post(() -> {
                     callback.onDownloadFinished(finalSpeed);
                     onComplete.run();
@@ -120,12 +127,42 @@ public class SpeedTester {
 
     private void runUploadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__up";
-        // Генеруємо 10МБ випадкових даних для відправки
-        byte[] payload = new byte[10000000];
-        RequestBody body = RequestBody.create(payload, MediaType.parse("application/octet-stream"));
 
-        Request request = new Request.Builder().url(url).post(body).build();
-        long startTime = System.currentTimeMillis();
+        // Генеруємо 10МБ випадкових даних
+        byte[] payload = new byte[10000000];
+        new Random().nextBytes(payload);
+
+        RequestBody rawBody = RequestBody.create(payload, MediaType.parse("application/octet-stream"));
+
+        final long[] lastReportTime = {System.currentTimeMillis()};
+        final long[] bytesSinceLastReport = {0};
+        final double[] smoothedSpeed = {0};
+        final long startTime = System.currentTimeMillis();
+
+        // Використовуємо наш кастомний ProgressRequestBody
+        ProgressRequestBody progressBody = new ProgressRequestBody(rawBody, (bytesWritten, contentLength) -> {
+            if (isCancelled) return;
+
+            long currentTime = System.currentTimeMillis();
+            long bytesDelta = bytesWritten - bytesSinceLastReport[0];
+
+            if (currentTime - lastReportTime[0] >= 150) {
+                double deltaSec = (currentTime - lastReportTime[0]) / 1000.0;
+                double currentMbps = ((bytesDelta * 8.0) / 1_000_000.0) / deltaSec;
+
+                smoothedSpeed[0] = smoothedSpeed[0] == 0 ? currentMbps : (smoothedSpeed[0] * 0.4 + currentMbps * 0.6);
+
+                int progress = (int) ((bytesWritten * 100) / contentLength);
+                final double reportSpeed = smoothedSpeed[0];
+
+                mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
+
+                lastReportTime[0] = currentTime;
+                bytesSinceLastReport[0] = bytesWritten;
+            }
+        });
+
+        Request request = new Request.Builder().url(url).post(progressBody).build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -135,18 +172,12 @@ public class SpeedTester {
 
             @Override
             public void onResponse(Call call, Response response) {
-                long endTime = System.currentTimeMillis();
-                double timeInSec = (endTime - startTime) / 1000.0;
-                // 10МБ = 80 Мегабіт
-                double uploadMbps = (payload.length * 8.0 / 1_000_000.0) / timeInSec;
-
+                double timeInSec = (System.currentTimeMillis() - startTime) / 1000.0;
+                double finalUploadMbps = (payload.length * 8.0 / 1_000_000.0) / timeInSec;
                 response.close();
 
                 mainHandler.post(() -> {
-                    // Оскільки OkHttp не дає легкого доступу до потоку відправки,
-                    // ми просто симулюємо прогрес 100% після завершення
-                    callback.onUploadProgress(uploadMbps, 100);
-                    callback.onUploadFinished(uploadMbps);
+                    callback.onUploadFinished(finalUploadMbps);
                     onComplete.run();
                 });
             }

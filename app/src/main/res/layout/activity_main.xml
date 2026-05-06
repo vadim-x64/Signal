@@ -19,7 +19,6 @@
             android:animateLayoutChanges="true"
             android:paddingBottom="32dp">
 
-            <!-- Віджет часу та дати -->
             <TextView
                 android:id="@+id/tvDateTime"
                 android:layout_width="wrap_content"
@@ -33,7 +32,6 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Заголовок і тип мережі -->
             <TextView
                 android:id="@+id/tvAppTitle"
                 android:layout_width="wrap_content"
@@ -57,30 +55,48 @@
                 app:layout_constraintStart_toStartOf="@+id/tvAppTitle"
                 app:layout_constraintTop_toBottomOf="@+id/tvAppTitle" />
 
-            <!-- Головний спідометр (поточна швидкість) -->
-            <TextView
-                android:id="@+id/tvCurrentSpeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:text="0.0"
-                android:textColor="#FFFFFF"
-                android:textSize="64sp"
-                android:textStyle="bold"
+            <!-- Новий блок спідометра -->
+            <FrameLayout
+                android:id="@+id/speedometerContainer"
+                android:layout_width="250dp"
+                android:layout_height="250dp"
+                android:layout_marginTop="24dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvNetworkType" />
+                app:layout_constraintTop_toBottomOf="@+id/tvNetworkType">
 
-            <TextView
-                android:id="@+id/tvSpeedUnit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Мбіт/с"
-                android:textColor="#B3FFFFFF"
-                android:textSize="18sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvCurrentSpeed" />
+                <com.test.myproject.signal.ui.SpeedometerView
+                    android:id="@+id/speedometerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <!-- Цифри поверх спідометра -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvCurrentSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:textColor="#FFFFFF"
+                        android:textSize="56sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvSpeedUnit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Мбіт/с"
+                        android:textColor="#B3FFFFFF"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </FrameLayout>
 
             <!-- Прогрес бар стану тесту -->
             <ProgressBar
@@ -88,13 +104,12 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="200dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:max="100"
                 android:progress="0"
                 android:progressTint="#00C9FF"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvSpeedUnit" />
+                app:layout_constraintTop_toBottomOf="@+id/speedometerContainer" />
 
             <TextView
                 android:id="@+id/tvTestState"
@@ -107,18 +122,17 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
 
-            <!-- Блок результатів (Картки) -->
+            <!-- Блок результатів (Картки) залишився тим самим -->
             <GridLayout
                 android:id="@+id/gridResults"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:columnCount="2"
                 android:rowCount="2"
                 app:layout_constraintTop_toBottomOf="@+id/tvTestState">
 
-                <!-- Ping -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -129,14 +143,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="PING"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvPing"
                         android:layout_width="wrap_content"
@@ -147,7 +159,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Завантаження -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -158,14 +169,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ЗАВАНТАЖЕННЯ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvDownload"
                         android:layout_width="wrap_content"
@@ -176,7 +185,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Вивантаження -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -187,14 +195,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ВИВАНТАЖЕННЯ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvUpload"
                         android:layout_width="wrap_content"
@@ -205,7 +211,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Час тесту -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -216,14 +221,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="16dp">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ЧАС ТЕСТУ"
                         android:textColor="#B3FFFFFF"
                         android:textSize="12sp" />
-
                     <TextView
                         android:id="@+id/tvDuration"
                         android:layout_width="wrap_content"
@@ -235,22 +238,20 @@
                 </LinearLayout>
             </GridLayout>
 
-            <!-- Графік швидкості -->
             <com.github.mikephil.charting.charts.LineChart
                 android:id="@+id/speedChart"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
+                android:layout_height="120dp"
                 android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 app:layout_constraintTop_toBottomOf="@+id/gridResults" />
 
-            <!-- Висновок про інтернет -->
             <TextView
                 android:id="@+id/tvConclusion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_background"
                 android:padding="16dp"
                 android:text="Очікування початку тестування..."
@@ -258,16 +259,15 @@
                 android:textSize="14sp"
                 app:layout_constraintTop_toBottomOf="@+id/speedChart" />
 
-            <!-- Кнопка старту -->
+            <!-- Оновлена кругла глянцева кнопка СТАРТ -->
             <FrameLayout
                 android:layout_width="140dp"
                 android:layout_height="140dp"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/tvConclusion">
 
-                <!-- Кастомний вид для анімації бульбашок -->
                 <com.test.myproject.signal.ui.BubbleView
                     android:id="@+id/bubbleView"
                     android:layout_width="match_parent"
@@ -275,13 +275,13 @@
 
                 <android.widget.Button
                     android:id="@+id/btnStartTest"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
+                    android:layout_width="110dp"
+                    android:layout_height="110dp"
                     android:layout_gravity="center"
-                    android:background="@drawable/button_background"
-                    android:elevation="4dp"
+                    android:background="@drawable/glossy_button"
+                    android:elevation="8dp"
                     android:text="СТАРТ"
-                    android:textColor="#0F2027"
+                    android:textColor="#FFFFFF"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </FrameLayout>
