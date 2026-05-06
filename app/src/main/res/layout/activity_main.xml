@@ -8,69 +8,86 @@
     android:background="@drawable/gradient_background"
     tools:context=".ui.MainActivity">
 
-    <!-- HEADER (Завжди прикріплений до верху) -->
+    <!-- ================= HEADER ================= -->
     <TextView
         android:id="@+id/tvAppTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="32dp"
         android:text="Signal"
         android:textColor="#FFFFFF"
         android:textSize="28sp"
         android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/btnRefresh"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tvNetworkType"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:text="Підключення: Перевірка..."
         android:textColor="#92FE9D"
         android:textSize="14sp"
+        app:layout_constraintEnd_toStartOf="@+id/tvDateTime"
         app:layout_constraintStart_toStartOf="@+id/tvAppTitle"
         app:layout_constraintTop_toBottomOf="@+id/tvAppTitle" />
 
     <ImageView
         android:id="@+id/btnHistory"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginTop="40dp"
-        android:layout_marginEnd="24dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
         android:focusable="true"
-        android:padding="8dp"
+        android:padding="10dp"
         android:src="@drawable/ic_history"
+        app:layout_constraintBottom_toBottomOf="@+id/tvAppTitle"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tvAppTitle"
+        app:tint="#FFFFFF" />
+
+    <ImageView
+        android:id="@+id/btnRefresh"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="10dp"
+        android:src="@drawable/ic_refresh"
+        app:layout_constraintBottom_toBottomOf="@+id/btnHistory"
+        app:layout_constraintEnd_toStartOf="@+id/btnHistory"
+        app:layout_constraintTop_toTopOf="@+id/btnHistory"
         app:tint="#FFFFFF" />
 
     <TextView
         android:id="@+id/tvDateTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="24dp"
         android:gravity="end"
         android:text="12:00\n01.01.2024"
         android:textColor="#B3FFFFFF"
-        android:textSize="14sp"
-        app:layout_constraintBottom_toBottomOf="@+id/btnHistory"
-        app:layout_constraintEnd_toStartOf="@+id/btnHistory"
-        app:layout_constraintTop_toTopOf="@+id/btnHistory" />
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnHistory" />
 
-    <!-- DYNAMIC BODY (Розподіляється рівномірно по екрану) -->
-
+    <!-- ================= SPEEDOMETER AREA ================= -->
     <FrameLayout
         android:id="@+id/speedometerContainer"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
-        android:layout_marginTop="80dp"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_marginTop="16dp"
         app:layout_constraintBottom_toTopOf="@+id/progressBarTest"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvNetworkType">
+        app:layout_constraintTop_toBottomOf="@+id/tvDateTime"
+        app:layout_constraintVertical_chainStyle="packed">
 
         <com.test.myproject.signal.ui.SpeedometerView
             android:id="@+id/speedometerView"
@@ -87,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:text="0.0"
                 android:textColor="#FFFFFF"
-                android:textSize="56sp"
+                android:textSize="48sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -101,7 +118,7 @@
                 android:layout_height="wrap_content"
                 android:text="Мбіт/с"
                 android:textColor="#B3FFFFFF"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="@+id/tvCurrentSpeed"
                 app:layout_constraintStart_toStartOf="@+id/tvCurrentSpeed"
                 app:layout_constraintTop_toBottomOf="@+id/tvCurrentSpeed" />
@@ -111,9 +128,9 @@
     <ProgressBar
         android:id="@+id/progressBarTest"
         style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="300dp"
+        android:layout_width="260dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
+        android:layout_marginTop="8dp"
         android:max="100"
         android:progress="0"
         android:progressTint="#00C9FF"
@@ -127,6 +144,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
         android:text="Очікування"
         android:textColor="#FFFFFF"
         android:textSize="12sp"
@@ -135,15 +153,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
 
+    <!-- ================= RESULTS GRID ================= -->
     <GridLayout
         android:id="@+id/gridResults"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="16dp"
         android:columnCount="2"
         android:rowCount="2"
         app:layout_constraintBottom_toTopOf="@+id/tvConclusion"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvTestState">
 
         <LinearLayout
@@ -151,11 +172,12 @@
             android:layout_height="wrap_content"
             android:layout_rowWeight="1"
             android:layout_columnWeight="1"
-            android:layout_margin="4dp"
+            android:layout_margin="6dp"
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -168,7 +190,7 @@
                 android:layout_height="wrap_content"
                 android:text="-- мс"
                 android:textColor="#FFFFFF"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -177,11 +199,12 @@
             android:layout_height="wrap_content"
             android:layout_rowWeight="1"
             android:layout_columnWeight="1"
-            android:layout_margin="4dp"
+            android:layout_margin="6dp"
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -194,7 +217,7 @@
                 android:layout_height="wrap_content"
                 android:text="-- Мбіт/с"
                 android:textColor="#92FE9D"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -203,11 +226,12 @@
             android:layout_height="wrap_content"
             android:layout_rowWeight="1"
             android:layout_columnWeight="1"
-            android:layout_margin="4dp"
+            android:layout_margin="6dp"
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -220,7 +244,7 @@
                 android:layout_height="wrap_content"
                 android:text="-- Мбіт/с"
                 android:textColor="#00C9FF"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -229,11 +253,12 @@
             android:layout_height="wrap_content"
             android:layout_rowWeight="1"
             android:layout_columnWeight="1"
-            android:layout_margin="4dp"
+            android:layout_margin="6dp"
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -246,32 +271,35 @@
                 android:layout_height="wrap_content"
                 android:text="0.0 с"
                 android:textColor="#FFFFFF"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </GridLayout>
 
+    <!-- ================= CONCLUSION ================= -->
     <TextView
         android:id="@+id/tvConclusion"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginHorizontal="26dp"
+        android:layout_marginBottom="16dp"
         android:background="@drawable/card_background"
         android:padding="16dp"
         android:text="Очікування початку тестування..."
         android:textColor="#FFFFFF"
-        android:textSize="14sp"
+        android:textSize="13sp"
+        android:gravity="center"
         app:layout_constraintBottom_toTopOf="@+id/btnStartContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/gridResults" />
 
-    <!-- FOOTER (Завжди прикріплений до низу) -->
+    <!-- ================= START BUTTON ================= -->
     <FrameLayout
         android:id="@+id/btnStartContainer"
-        android:layout_width="160dp"
-        android:layout_height="160dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="32dp"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_marginBottom="40dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

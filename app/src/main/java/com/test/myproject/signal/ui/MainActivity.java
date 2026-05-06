@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvNetworkType, tvCurrentSpeed, tvTestState, tvSpeedUnit;
     private TextView tvPing, tvDownload, tvUpload, tvDuration, tvConclusion, tvDateTime;
     private ProgressBar progressBarTest;
-    private ImageView btnHistory;
+    private ImageView btnHistory, btnRefresh;
 
     private LiquidButtonView btnStartTest;
     private SpeedometerView speedometerView;
@@ -71,6 +71,14 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, ChartsActivity.class));
         });
 
+        // Обробник для нової кнопки оновлення
+        btnRefresh.setOnClickListener(v -> {
+            // Анімація обертання при натисканні
+            btnRefresh.animate().rotationBy(360f).setDuration(500).start();
+            resetUI();
+            Toast.makeText(this, "Дані оновлено", Toast.LENGTH_SHORT).show();
+        });
+
         btnStartTest.setOnClickListener(v -> {
             // Плавна анімація натискання (Scale down & up)
             btnStartTest.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).withEndAction(() -> {
@@ -90,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         tvDateTime = findViewById(R.id.tvDateTime);
         btnHistory = findViewById(R.id.btnHistory);
+        btnRefresh = findViewById(R.id.btnRefresh); // Ініціалізація кнопки оновлення
         tvNetworkType = findViewById(R.id.tvNetworkType);
         tvCurrentSpeed = findViewById(R.id.tvCurrentSpeed);
         tvSpeedUnit = findViewById(R.id.tvSpeedUnit);
@@ -134,6 +143,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateNetworkInfo() {
         tvNetworkType.setText("Підключення: " + networkAnalyzer.getNetworkType());
+    }
+
+    // Новий метод для скидання інтерфейсу
+    private void resetUI() {
+        if (isTesting) {
+            cancelTest();
+        }
+
+        // Скидання тексту
+        tvPing.setText("-- мс");
+        tvDownload.setText("-- Мбіт/с");
+        tvUpload.setText("-- Мбіт/с");
+        tvDuration.setText("0.0 с");
+        tvCurrentSpeed.setText("0.0");
+        tvSpeedUnit.setText("Мбіт/с");
+        tvTestState.setText("Очікування");
+        tvConclusion.setText("Очікування початку тестування...");
+
+        // Скидання прогресу
+        progressBarTest.setProgress(0);
+        speedometerView.reset();
+
+        // Перевірка мережі
+        updateNetworkInfo();
     }
 
     private void startTest() {
