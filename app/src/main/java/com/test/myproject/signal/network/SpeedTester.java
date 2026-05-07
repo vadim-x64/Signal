@@ -68,7 +68,7 @@ public class SpeedTester {
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
-        String url = "https://speed.cloudflare.com/__down?bytes=50000000";
+        String url = "https://speed.cloudflare.com/__down?bytes=50000000"; // 50MB
         Request request = new Request.Builder().url(url).build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -146,7 +146,10 @@ public class SpeedTester {
 
     private void runUploadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__up";
-        final long totalBytes = 20000000;
+
+        // Масиви з одного елемента потрібні, щоб передати фінальні значення з внутрішнього класу в колбек
+        final long[] finalBytesWritten = {0};
+        final long[] finalTimeMs = {0};
 
         RequestBody requestBody = new RequestBody() {
             @Override
@@ -156,56 +159,51 @@ public class SpeedTester {
 
             @Override
             public long contentLength() {
-                return totalBytes;
+                // ДУЖЕ ВАЖЛИВО: -1 означає Chunked Transfer Encoding.
+                // Це не дає Андроїду зжерти всі байти в пам'ять миттєво і змушує відправляти їх потоком.
+                return -1;
             }
 
             @Override
             public void writeTo(BufferedSink sink) throws IOException {
-                byte[] chunk = new byte[65536];
+                byte[] chunk = new byte[128 * 1024]; // 128KB шматки
                 new Random().nextBytes(chunk);
 
                 long bytesWritten = 0;
                 long startTime = System.currentTimeMillis();
+                long testDurationMs = 8000; // ТЕСТ ТРИВАЄ РІВНО 8 СЕКУНД
                 long lastReportTime = startTime;
 
-                LinkedList<SpeedDataPoint> rollingWindow = new LinkedList<>();
                 double displaySpeed = 0;
 
-                while (bytesWritten < totalBytes && !isCancelled) {
-                    long toWrite = Math.min(chunk.length, totalBytes - bytesWritten);
-                    sink.write(chunk, 0, (int) toWrite);
-                    sink.flush();
+                // Цикл крутиться рівно 8 секунд, відправляючи дані без зупинки
+                while (System.currentTimeMillis() - startTime < testDurationMs && !isCancelled) {
+                    sink.write(chunk);
+                    sink.flush(); // Примусовий пуш в мережу
+                    bytesWritten += chunk.length;
 
-                    bytesWritten += toWrite;
                     long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastReportTime >= 250) {
+                        double totalTimeSec = (currentTime - startTime) / 1000.0;
 
-                    rollingWindow.add(new SpeedDataPoint(currentTime, bytesWritten));
-
-                    while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
-                        rollingWindow.removeFirst();
-                    }
-
-                    if (currentTime - lastReportTime >= 200) {
-                        if (rollingWindow.size() > 1) {
-                            SpeedDataPoint oldest = rollingWindow.getFirst();
-                            SpeedDataPoint newest = rollingWindow.getLast();
-
-                            double deltaSec = (newest.timestamp - oldest.timestamp) / 1000.0;
-                            long deltaBytes = newest.bytes - oldest.bytes;
-
-                            if (deltaSec > 0) {
-                                double instantSpeed = ((deltaBytes * 8.0) / 1_000_000.0) / deltaSec;
-                                displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.7 + instantSpeed * 0.3);
-                            }
+                        // Ігноруємо перші 0.3 секунди, бо там буфер ще заповнюється і дає хибні цифри
+                        if (totalTimeSec > 0.3) {
+                            // Рахуємо середню швидкість з початку тесту. Це гасить будь-які різкі стрибки стрілки.
+                            double currentSpeed = ((bytesWritten * 8.0) / 1_000_000.0) / totalTimeSec;
+                            displaySpeed = displaySpeed == 0 ? currentSpeed : (displaySpeed * 0.8 + currentSpeed * 0.2);
                         }
 
-                        int progress = (int) ((bytesWritten * 100) / totalBytes);
+                        int progress = (int) (((currentTime - startTime) * 100) / testDurationMs);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
 
                         lastReportTime = currentTime;
                     }
                 }
+
+                // Зберігаємо результати для колбеку
+                finalBytesWritten[0] = bytesWritten;
+                finalTimeMs[0] = System.currentTimeMillis() - startTime;
             }
         };
 
@@ -215,20 +213,30 @@ public class SpeedTester {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                if (!isCancelled) mainHandler.post(() -> callback.onError("Помилка вивантаження: " + e.getMessage()));
+                // Оскільки ми перериваємо потік самі через 8 секунд, може вискочити "Socket closed" або "Canceled".
+                // Це нормальна поведінка для нашого спідтесту, тому ми перевіряємо це.
+                if (!isCancelled && !e.getMessage().contains("Canceled") && !e.getMessage().contains("Socket closed")) {
+                    mainHandler.post(() -> callback.onError("Помилка вивантаження: " + e.getMessage()));
+                } else if (!isCancelled) {
+                    reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeMs[0]);
+                }
             }
 
             @Override
             public void onResponse(Call call, Response response) {
-                double totalTimeSec = (System.currentTimeMillis() - testStartTime) / 1000.0;
-                double exactFinalSpeed = ((totalBytes * 8.0) / 1_000_000.0) / totalTimeSec;
                 response.close();
-
-                mainHandler.post(() -> {
-                    callback.onUploadFinished(exactFinalSpeed);
-                    onComplete.run();
-                });
+                reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeMs[0]);
             }
+        });
+    }
+
+    // Допоміжний метод для виводу фінального результату
+    private void reportFinalUpload(SpeedTestCallback callback, Runnable onComplete, long bytes, long timeMs) {
+        if (timeMs == 0) timeMs = 1; // Запобіжник від ділення на нуль
+        double exactFinalSpeed = ((bytes * 8.0) / 1_000_000.0) / (timeMs / 1000.0);
+        mainHandler.post(() -> {
+            callback.onUploadFinished(exactFinalSpeed);
+            onComplete.run();
         });
     }
 }
