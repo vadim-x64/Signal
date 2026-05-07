@@ -24,7 +24,6 @@ public class BubbleView extends View {
 
     private void init() {
         paint = new Paint();
-        // Колір бульбашок (блакитний під стиль UI)
         paint.setColor(Color.parseColor("#00C9FF"));
         paint.setStyle(Paint.Style.FILL);
         paint.setAntiAlias(true);
@@ -36,7 +35,7 @@ public class BubbleView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         bubbles.clear();
-        // Створюємо 15 бульбашок для гарного ефекту
+
         for (int i = 0; i < 15; i++) {
             bubbles.add(new Bubble(w, h));
         }
@@ -52,7 +51,7 @@ public class BubbleView extends View {
             canvas.drawCircle(b.x, b.y, b.radius, paint);
             b.update();
         }
-        // Зациклюємо перемальовування для анімації (~60 FPS)
+
         invalidate();
     }
 
@@ -63,10 +62,11 @@ public class BubbleView extends View {
 
     public void stopAnimation() {
         isRunning = false;
-        // Скидаємо позиції після зупинки
+
         for (Bubble b : bubbles) {
             b.reset();
         }
+
         invalidate();
     }
 
@@ -82,21 +82,18 @@ public class BubbleView extends View {
         }
 
         void reset() {
-            radius = random.nextInt(12) + 6; // Розмір від 6 до 18 пікселів
+            radius = random.nextInt(12) + 6;
             x = random.nextInt(viewWidth);
-            // Бульбашки починають знизу
             y = viewHeight + radius;
-            speed = random.nextFloat() * 3 + 2; // Швидкість спливання
-            alpha = random.nextInt(155) + 100; // Прозорість
+            speed = random.nextFloat() * 3 + 2;
+            alpha = random.nextInt(155) + 100;
         }
 
         void update() {
             y -= speed;
-            // Додаємо легке коливання вліво-вправо
             x += (random.nextFloat() - 0.5f) * 2;
-            alpha -= 3; // Плавно зникають під час спливання
+            alpha -= 3;
 
-            // Якщо бульбашка вийшла за межі або повністю стала прозорою ("лопнула")
             if (y + radius < 0 || alpha <= 0) {
                 reset();
             }

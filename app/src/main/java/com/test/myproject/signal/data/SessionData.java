@@ -3,7 +3,6 @@ package com.test.myproject.signal.data;
 import java.util.ArrayList;
 import java.util.List;
 
-// Синглтон для збереження даних, поки додаток не закрито
 public class SessionData {
     private static SessionData instance;
     private final List<TestResult> history;

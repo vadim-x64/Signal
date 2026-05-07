@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ChartsActivity extends AppCompatActivity {
-
     private LineChart chartDownload;
     private BarChart chartUpload;
     private TextView tvNoData;
@@ -37,15 +36,12 @@ public class ChartsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_charts);
-
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
-
         chartDownload = findViewById(R.id.chartDownload);
         chartUpload = findViewById(R.id.chartUpload);
         tvNoData = findViewById(R.id.tvNoData);
-        chartsGroup = findViewById(R.id.chartsGroup); // Підключили групу
-
+        chartsGroup = findViewById(R.id.chartsGroup);
         loadChartsData();
     }
 
@@ -53,7 +49,6 @@ public class ChartsActivity extends AppCompatActivity {
         List<TestResult> history = SessionData.getInstance().getHistory();
 
         if (history.isEmpty()) {
-            // ВИПРАВЛЕНО: Ховаємо відразу всю групу (заголовки + сірі фони + графіки)
             chartsGroup.setVisibility(View.GONE);
             tvNoData.setVisibility(View.VISIBLE);
             return;
@@ -61,7 +56,6 @@ public class ChartsActivity extends AppCompatActivity {
 
         chartsGroup.setVisibility(View.VISIBLE);
         tvNoData.setVisibility(View.GONE);
-
         setupLineChart(history);
         setupBarChart(history);
     }
@@ -84,28 +78,22 @@ public class ChartsActivity extends AppCompatActivity {
         dataSet.setValueTextColor(Color.WHITE);
         dataSet.setValueTextSize(10f);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
-
         dataSet.setDrawFilled(true);
         dataSet.setFillColor(Color.parseColor("#92FE9D"));
         dataSet.setFillAlpha(50);
-
         LineData lineData = new LineData(dataSet);
         chartDownload.setData(lineData);
-
         chartDownload.getDescription().setEnabled(false);
         chartDownload.getLegend().setTextColor(Color.WHITE);
         chartDownload.getAxisRight().setEnabled(false);
-
         chartDownload.getAxisLeft().setTextColor(Color.WHITE);
         chartDownload.getAxisLeft().setAxisMinimum(0f);
-
         XAxis xAxis = chartDownload.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setTextColor(Color.WHITE);
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setGranularity(1f);
         xAxis.setDrawGridLines(false);
-
         chartDownload.animateX(1000);
         chartDownload.invalidate();
     }
@@ -123,26 +111,20 @@ public class ChartsActivity extends AppCompatActivity {
         dataSet.setColor(Color.parseColor("#00C9FF"));
         dataSet.setValueTextColor(Color.WHITE);
         dataSet.setValueTextSize(10f);
-
         BarData barData = new BarData(dataSet);
         barData.setBarWidth(0.6f);
-
         chartUpload.setData(barData);
-
         chartUpload.getDescription().setEnabled(false);
         chartUpload.getLegend().setTextColor(Color.WHITE);
         chartUpload.getAxisRight().setEnabled(false);
-
         chartUpload.getAxisLeft().setTextColor(Color.WHITE);
         chartUpload.getAxisLeft().setAxisMinimum(0f);
-
         XAxis xAxis = chartUpload.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setTextColor(Color.WHITE);
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setGranularity(1f);
         xAxis.setDrawGridLines(false);
-
         chartUpload.animateY(1000);
         chartUpload.invalidate();
     }

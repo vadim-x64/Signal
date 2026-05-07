@@ -19,7 +19,6 @@ import okhttp3.Response;
 import okio.BufferedSink;
 
 public class SpeedTester {
-
     private final OkHttpClient client;
     private final Handler mainHandler;
     private boolean isCancelled = false;
@@ -27,16 +26,26 @@ public class SpeedTester {
     private static class SpeedDataPoint {
         long timestamp;
         long bytes;
-        SpeedDataPoint(long t, long b) { timestamp = t; bytes = b; }
+
+        SpeedDataPoint(long t, long b) {
+            timestamp = t;
+            bytes = b;
+        }
     }
 
     public interface SpeedTestCallback {
         void onPingResult(long pingMs);
+
         void onDownloadProgress(double mbps, int progressPercent);
+
         void onDownloadFinished(double finalMbps);
+
         void onUploadProgress(double mbps, int progressPercent);
+
         void onUploadFinished(double finalMbps);
+
         void onError(String error);
+
         void onFinished(long totalDurationMs);
     }
 
@@ -68,13 +77,14 @@ public class SpeedTester {
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
-        String url = "https://speed.cloudflare.com/__down?bytes=50000000"; // 50MB
+        String url = "https://speed.cloudflare.com/__down?bytes=50000000";
         Request request = new Request.Builder().url(url).build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                if (!isCancelled) mainHandler.post(() -> callback.onError("Помилка завантаження: " + e.getMessage()));
+                if (!isCancelled)
+                    mainHandler.post(() -> callback.onError("Помилка завантаження: " + e.getMessage()));
             }
 
             @Override
@@ -88,20 +98,20 @@ public class SpeedTester {
                 mainHandler.post(() -> callback.onPingResult(pingMs));
 
                 InputStream is = response.body().byteStream();
-                byte[] buffer = new byte[16384];
 
+                byte[] buffer = new byte[16384];
                 long totalBytesRead = 0;
                 long startTime = System.currentTimeMillis();
                 long lastReportTime = startTime;
 
                 LinkedList<SpeedDataPoint> rollingWindow = new LinkedList<>();
-                double displaySpeed = 0;
 
+                double displaySpeed = 0;
                 int bytesRead;
+
                 while ((bytesRead = is.read(buffer)) != -1 && !isCancelled) {
                     totalBytesRead += bytesRead;
                     long currentTime = System.currentTimeMillis();
-
                     rollingWindow.add(new SpeedDataPoint(currentTime, totalBytesRead));
 
                     while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
@@ -125,7 +135,6 @@ public class SpeedTester {
                         int progress = (int) ((totalBytesRead * 100) / 50000000);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onDownloadProgress(reportSpeed, Math.min(progress, 100)));
-
                         lastReportTime = currentTime;
                     }
                 }
@@ -137,7 +146,6 @@ public class SpeedTester {
 
                 mainHandler.post(() -> {
                     callback.onDownloadFinished(exactFinalSpeed);
-                    // Пауза 1 секунда між тестами для красивого падіння стрілки
                     mainHandler.postDelayed(onComplete, 1000);
                 });
             }
@@ -147,7 +155,6 @@ public class SpeedTester {
     private void runUploadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__up";
 
-        // Масиви з одного елемента потрібні, щоб передати фінальні значення з внутрішнього класу в колбек
         final long[] finalBytesWritten = {0};
         final long[] finalTimeMs = {0};
 
@@ -159,36 +166,30 @@ public class SpeedTester {
 
             @Override
             public long contentLength() {
-                // ДУЖЕ ВАЖЛИВО: -1 означає Chunked Transfer Encoding.
-                // Це не дає Андроїду зжерти всі байти в пам'ять миттєво і змушує відправляти їх потоком.
                 return -1;
             }
 
             @Override
             public void writeTo(BufferedSink sink) throws IOException {
-                byte[] chunk = new byte[128 * 1024]; // 128KB шматки
+                byte[] chunk = new byte[128 * 1024];
                 new Random().nextBytes(chunk);
 
                 long bytesWritten = 0;
                 long startTime = System.currentTimeMillis();
-                long testDurationMs = 8000; // ТЕСТ ТРИВАЄ РІВНО 8 СЕКУНД
+                long testDurationMs = 8000;
                 long lastReportTime = startTime;
-
                 double displaySpeed = 0;
 
-                // Цикл крутиться рівно 8 секунд, відправляючи дані без зупинки
                 while (System.currentTimeMillis() - startTime < testDurationMs && !isCancelled) {
                     sink.write(chunk);
-                    sink.flush(); // Примусовий пуш в мережу
+                    sink.flush();
                     bytesWritten += chunk.length;
 
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastReportTime >= 250) {
                         double totalTimeSec = (currentTime - startTime) / 1000.0;
 
-                        // Ігноруємо перші 0.3 секунди, бо там буфер ще заповнюється і дає хибні цифри
                         if (totalTimeSec > 0.3) {
-                            // Рахуємо середню швидкість з початку тесту. Це гасить будь-які різкі стрибки стрілки.
                             double currentSpeed = ((bytesWritten * 8.0) / 1_000_000.0) / totalTimeSec;
                             displaySpeed = displaySpeed == 0 ? currentSpeed : (displaySpeed * 0.8 + currentSpeed * 0.2);
                         }
@@ -196,12 +197,10 @@ public class SpeedTester {
                         int progress = (int) (((currentTime - startTime) * 100) / testDurationMs);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
-
                         lastReportTime = currentTime;
                     }
                 }
 
-                // Зберігаємо результати для колбеку
                 finalBytesWritten[0] = bytesWritten;
                 finalTimeMs[0] = System.currentTimeMillis() - startTime;
             }
@@ -213,8 +212,6 @@ public class SpeedTester {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                // Оскільки ми перериваємо потік самі через 8 секунд, може вискочити "Socket closed" або "Canceled".
-                // Це нормальна поведінка для нашого спідтесту, тому ми перевіряємо це.
                 if (!isCancelled && !e.getMessage().contains("Canceled") && !e.getMessage().contains("Socket closed")) {
                     mainHandler.post(() -> callback.onError("Помилка вивантаження: " + e.getMessage()));
                 } else if (!isCancelled) {
@@ -230,9 +227,8 @@ public class SpeedTester {
         });
     }
 
-    // Допоміжний метод для виводу фінального результату
     private void reportFinalUpload(SpeedTestCallback callback, Runnable onComplete, long bytes, long timeMs) {
-        if (timeMs == 0) timeMs = 1; // Запобіжник від ділення на нуль
+        if (timeMs == 0) timeMs = 1;
         double exactFinalSpeed = ((bytes * 8.0) / 1_000_000.0) / (timeMs / 1000.0);
         mainHandler.post(() -> {
             callback.onUploadFinished(exactFinalSpeed);

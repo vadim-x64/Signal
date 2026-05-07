@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Тінь / Основа -->
     <item>
         <shape android:shape="oval">
             <solid android:color="#22000000" />
         </shape>
     </item>
 
-    <!-- Основний градієнт кнопки -->
     <item android:bottom="4dp">
         <shape android:shape="oval">
             <gradient
@@ -17,8 +15,11 @@
         </shape>
     </item>
 
-    <!-- Внутрішня обводка (ефект опуклості) -->
-    <item android:bottom="4dp" android:left="2dp" android:right="2dp" android:top="2dp">
+    <item
+        android:bottom="4dp"
+        android:left="2dp"
+        android:right="2dp"
+        android:top="2dp">
         <shape android:shape="oval">
             <stroke
                 android:width="1dp"
@@ -26,8 +27,11 @@
         </shape>
     </item>
 
-    <!-- Верхній блік (ефект скла/глянцю) -->
-    <item android:bottom="50dp" android:left="15dp" android:right="15dp" android:top="4dp">
+    <item
+        android:bottom="50dp"
+        android:left="15dp"
+        android:right="15dp"
+        android:top="4dp">
         <shape android:shape="oval">
             <gradient
                 android:angle="270"

@@ -7,7 +7,6 @@
     android:background="@drawable/gradient_background"
     tools:context=".ui.MainActivity">
 
-    <!-- ================= HEADER ================= -->
     <TextView
         android:id="@+id/tvAppTitle"
         android:layout_width="0dp"
@@ -76,7 +75,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnHistory" />
 
-    <!-- ================= SPEEDOMETER AREA ================= -->
     <FrameLayout
         android:id="@+id/speedometerContainer"
         android:layout_width="260dp"
@@ -152,7 +150,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progressBarTest" />
 
-    <!-- ================= RESULTS GRID ================= -->
     <GridLayout
         android:id="@+id/gridResults"
         android:layout_width="0dp"
@@ -175,14 +172,16 @@
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="12dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="PING"
                 android:textColor="#B3FFFFFF"
                 android:textSize="12sp" />
+
             <TextView
                 android:id="@+id/tvPing"
                 android:layout_width="wrap_content"
@@ -202,14 +201,16 @@
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="12dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ЗАВАНТАЖЕННЯ"
                 android:textColor="#B3FFFFFF"
                 android:textSize="12sp" />
+
             <TextView
                 android:id="@+id/tvDownload"
                 android:layout_width="wrap_content"
@@ -229,14 +230,16 @@
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="12dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ВИВАНТАЖЕННЯ"
                 android:textColor="#B3FFFFFF"
                 android:textSize="12sp" />
+
             <TextView
                 android:id="@+id/tvUpload"
                 android:layout_width="wrap_content"
@@ -256,14 +259,16 @@
             android:background="@drawable/card_background"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="12dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ЧАС ТЕСТУ"
                 android:textColor="#B3FFFFFF"
                 android:textSize="12sp" />
+
             <TextView
                 android:id="@+id/tvDuration"
                 android:layout_width="wrap_content"
@@ -275,16 +280,15 @@
         </LinearLayout>
     </GridLayout>
 
-    <!-- ================= CONCLUSION ================= -->
     <TextView
         android:id="@+id/tvConclusion"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp"
         android:layout_marginBottom="16dp"
-        android:minHeight="80dp"
         android:background="@drawable/card_background"
         android:gravity="center"
+        android:minHeight="80dp"
         android:padding="16dp"
         android:text="Очікування початку тестування..."
         android:textColor="#FFFFFF"
@@ -294,8 +298,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/gridResults" />
 
-    <!-- ================= START BUTTON ================= -->
-    <!-- Відв'язано верх від тексту, тепер кнопка намертво стоїть внизу -->
     <FrameLayout
         android:id="@+id/btnStartContainer"
         android:layout_width="180dp"

@@ -1,6 +1,8 @@
 package com.test.myproject.signal.ui;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -11,6 +13,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.test.myproject.signal.R;
 import com.test.myproject.signal.data.SessionData;
@@ -23,28 +27,21 @@ import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-
     private TextView tvNetworkType, tvCurrentSpeed, tvTestState, tvSpeedUnit;
     private TextView tvPing, tvDownload, tvUpload, tvDuration, tvConclusion, tvDateTime;
     private ProgressBar progressBarTest;
     private ImageView btnHistory, btnRefresh;
-
     private LiquidButtonView btnStartTest;
     private SpeedometerView speedometerView;
     private GridLayout gridResults;
-
     private NetworkAnalyzer networkAnalyzer;
     private SpeedTester speedTester;
-
     private boolean isTesting = false;
-
     private Handler clockHandler;
     private Runnable clockRunnable;
-
     private Handler durationHandler;
     private Runnable durationRunnable;
     private long testStartTime = 0;
-
     private double finalDownload = 0, finalUpload = 0;
 
     @Override
@@ -52,19 +49,23 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 100);
+        }
+
         initViews();
         startClockWidget();
-
         networkAnalyzer = new NetworkAnalyzer(this);
         speedTester = new SpeedTester();
 
-        networkAnalyzer.startMonitoring(networkType -> {
+        networkAnalyzer.startMonitoring(networkInfo -> {
             runOnUiThread(() -> {
-                tvNetworkType.setText("Підключення: " + networkType);
+                tvNetworkType.setText("Підключення: " + networkInfo);
                 tvNetworkType.setAlpha(0.3f);
                 tvNetworkType.animate().alpha(1f).setDuration(800).start();
             });
         });
+
         updateNetworkInfo();
 
         btnHistory.setOnClickListener(v -> {
@@ -101,18 +102,16 @@ public class MainActivity extends AppCompatActivity {
         tvSpeedUnit = findViewById(R.id.tvSpeedUnit);
         tvTestState = findViewById(R.id.tvTestState);
         progressBarTest = findViewById(R.id.progressBarTest);
-
         tvPing = findViewById(R.id.tvPing);
         tvDownload = findViewById(R.id.tvDownload);
         tvUpload = findViewById(R.id.tvUpload);
         tvDuration = findViewById(R.id.tvDuration);
         tvConclusion = findViewById(R.id.tvConclusion);
-
         btnStartTest = findViewById(R.id.btnStartTest);
         speedometerView = findViewById(R.id.speedometerView);
         gridResults = findViewById(R.id.gridResults);
-
         durationHandler = new Handler(Looper.getMainLooper());
+
         durationRunnable = new Runnable() {
             @Override
             public void run() {
@@ -128,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
     private void startClockWidget() {
         clockHandler = new Handler(Looper.getMainLooper());
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss\ndd.MM.yyyy", new Locale("uk", "UA"));
+
         clockRunnable = new Runnable() {
             @Override
             public void run() {
@@ -135,11 +135,12 @@ public class MainActivity extends AppCompatActivity {
                 clockHandler.postDelayed(this, 1000);
             }
         };
+
         clockHandler.post(clockRunnable);
     }
 
     private void updateNetworkInfo() {
-        tvNetworkType.setText("Підключення: " + networkAnalyzer.getNetworkType());
+        tvNetworkType.setText("Підключення: " + networkAnalyzer.getFullNetworkInfo());
     }
 
     private void resetUI() {
@@ -156,20 +157,16 @@ public class MainActivity extends AppCompatActivity {
         tvSpeedUnit.setText("Мбіт/с");
         tvTestState.setText("Очікування");
         tvConclusion.setText("Очікування початку тестування...");
-
         progressBarTest.setProgress(0);
         speedometerView.reset();
-
         updateNetworkInfo();
     }
 
     private void startTest() {
         isTesting = true;
         btnStartTest.setTestingState(true);
-
         gridResults.animate().alpha(0.4f).setDuration(600).start();
         tvConclusion.animate().alpha(0.4f).setDuration(600).start();
-
         tvPing.setText("-- мс");
         tvDownload.setText("-- Мбіт/с");
         tvUpload.setText("-- Мбіт/с");
@@ -179,10 +176,8 @@ public class MainActivity extends AppCompatActivity {
         tvSpeedUnit.setText("Мбіт/с");
         progressBarTest.setProgress(0);
         tvConclusion.setText("Тестування...");
-
         testStartTime = System.currentTimeMillis();
         durationHandler.post(durationRunnable);
-
         speedometerView.reset();
         updateNetworkInfo();
 
@@ -194,8 +189,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDownloadProgress(double mbps, int progressPercent) {
-                tvTestState.setText("⬇ Перевірка завантаження...");
-                tvSpeedUnit.setText("Мбіт/с (⬇)");
+                tvTestState.setText("Перевірка завантаження...");
+                tvSpeedUnit.setText("Мбіт/с");
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
                 speedometerView.setSpeed((float) mbps);
                 progressBarTest.setProgress(progressPercent / 2);
@@ -205,7 +200,6 @@ public class MainActivity extends AppCompatActivity {
             public void onDownloadFinished(double finalMbps) {
                 finalDownload = finalMbps;
                 tvDownload.setText(String.format(Locale.US, "%.1f Мбіт/с", finalMbps));
-
                 speedometerView.smoothReset();
 
                 tvCurrentSpeed.animate().alpha(0f).setDuration(400).withEndAction(() -> {
@@ -215,8 +209,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onUploadProgress(double mbps, int progressPercent) {
-                tvTestState.setText("⬆ Перевірка вивантаження...");
-                tvSpeedUnit.setText("Мбіт/с (⬆)");
+                tvTestState.setText("Перевірка вивантаження...");
+                tvSpeedUnit.setText("Мбіт/с");
                 tvCurrentSpeed.setAlpha(1f);
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
                 speedometerView.setSpeed((float) mbps);
@@ -245,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
                 tvConclusion.setText(networkAnalyzer.generateConclusion(finalDownload, finalUpload, ping));
 
                 SessionData.getInstance().addResult(new TestResult(finalDownload, finalUpload, ping));
-
                 finishTestUI();
             }
         });
@@ -260,12 +253,9 @@ public class MainActivity extends AppCompatActivity {
     private void finishTestUI() {
         isTesting = false;
         btnStartTest.setTestingState(false);
-
         durationHandler.removeCallbacks(durationRunnable);
-
         tvTestState.setText("Завершено");
         progressBarTest.setProgress(100);
-
         speedometerView.smoothReset();
 
         tvCurrentSpeed.animate().alpha(0f).setDuration(400).withEndAction(() -> {
@@ -274,9 +264,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
 
         tvSpeedUnit.setText("Мбіт/с");
-
         gridResults.animate().alpha(1f).setDuration(1000).start();
-
         tvConclusion.setAlpha(0f);
         tvConclusion.animate().alpha(1f).setDuration(1000).start();
     }

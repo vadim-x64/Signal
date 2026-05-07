@@ -20,13 +20,10 @@ public class SpeedometerView extends View {
     private Paint needlePaint;
     private Paint textPaint;
     private RectF arcBounds;
-
     private float currentSpeed = 0f;
     private float maxSpeed = 150f;
-
     private final float START_ANGLE = 135f;
     private final float SWEEP_ANGLE = 270f;
-
     private float centerX, centerY, radius;
     private ValueAnimator speedAnimator;
 
@@ -41,25 +38,20 @@ public class SpeedometerView extends View {
         backgroundArcPaint.setStrokeWidth(30f);
         backgroundArcPaint.setColor(Color.parseColor("#1AFFFFFF"));
         backgroundArcPaint.setStrokeCap(Paint.Cap.ROUND);
-
         arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         arcPaint.setStyle(Paint.Style.STROKE);
         arcPaint.setStrokeWidth(30f);
         arcPaint.setStrokeCap(Paint.Cap.ROUND);
-
         tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         tickPaint.setStyle(Paint.Style.STROKE);
         tickPaint.setStrokeCap(Paint.Cap.ROUND);
-
         needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         needlePaint.setStyle(Paint.Style.FILL);
         needlePaint.setColor(Color.WHITE);
-
         textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setColor(Color.parseColor("#B3FFFFFF"));
         textPaint.setTextSize(32f);
         textPaint.setTextAlign(Paint.Align.CENTER);
-
         arcBounds = new RectF();
     }
 
@@ -67,8 +59,8 @@ public class SpeedometerView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         float padding = 100f;
-        arcBounds.set(padding, padding, w - padding, h - padding);
 
+        arcBounds.set(padding, padding, w - padding, h - padding);
         centerX = w / 2f;
         centerY = h / 2f;
         radius = arcBounds.width() / 2f;
@@ -82,18 +74,16 @@ public class SpeedometerView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
         canvas.drawArc(arcBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundArcPaint);
 
         int numTicks = 30;
+
         for (int i = 0; i <= numTicks; i++) {
             float angle = START_ANGLE + (i * SWEEP_ANGLE / numTicks);
             double rad = Math.toRadians(angle);
             boolean isMajorTick = (i % 6 == 0);
-
             float tickLength = isMajorTick ? 25f : 12f;
             float startRadius = radius + 20f;
-
             float startX = (float) (centerX + startRadius * Math.cos(rad));
             float startY = (float) (centerY + startRadius * Math.sin(rad));
             float stopX = (float) (centerX + (startRadius + tickLength) * Math.cos(rad));
@@ -104,7 +94,7 @@ public class SpeedometerView extends View {
             canvas.drawLine(startX, startY, stopX, stopY, tickPaint);
 
             if (isMajorTick) {
-                int speedValue = (int) ((i / (float)numTicks) * maxSpeed);
+                int speedValue = (int) ((i / (float) numTicks) * maxSpeed);
                 String text = String.valueOf(speedValue);
 
                 float textRadius = startRadius + tickLength + 32f;
@@ -114,7 +104,6 @@ public class SpeedometerView extends View {
                 Rect textBounds = new Rect();
                 textPaint.getTextBounds(text, 0, text.length(), textBounds);
                 textY += textBounds.height() / 2f;
-
                 canvas.drawText(text, textX, textY, textPaint);
             }
         }
@@ -146,7 +135,6 @@ public class SpeedometerView extends View {
         needlePath.lineTo(baseLeftX, baseLeftY);
         needlePath.lineTo(baseRightX, baseRightY);
         needlePath.close();
-
         canvas.drawPath(needlePath, needlePaint);
 
         float baseX = (float) (centerX + innerNeedleRadius * Math.cos(needleRad));
@@ -156,6 +144,7 @@ public class SpeedometerView extends View {
 
     public void setSpeed(float speed) {
         boolean scaleChanged = false;
+
         while (speed > maxSpeed * 0.9f) {
             maxSpeed *= 2f;
             scaleChanged = true;
@@ -170,10 +159,12 @@ public class SpeedometerView extends View {
         speedAnimator = ValueAnimator.ofFloat(currentSpeed, speed);
         speedAnimator.setDuration(250);
         speedAnimator.setInterpolator(new DecelerateInterpolator());
+
         speedAnimator.addUpdateListener(animation -> {
             currentSpeed = (float) animation.getAnimatedValue();
             invalidate();
         });
+
         speedAnimator.start();
     }
 
@@ -185,10 +176,12 @@ public class SpeedometerView extends View {
         speedAnimator = ValueAnimator.ofFloat(currentSpeed, 0f);
         speedAnimator.setDuration(800);
         speedAnimator.setInterpolator(new DecelerateInterpolator());
+
         speedAnimator.addUpdateListener(animation -> {
             currentSpeed = (float) animation.getAnimatedValue();
             invalidate();
         });
+
         speedAnimator.start();
     }
 

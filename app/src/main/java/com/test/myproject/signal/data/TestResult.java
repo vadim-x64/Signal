@@ -4,7 +4,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-// Клас для збереження одного результату тесту
 public class TestResult {
     private final double downloadSpeed;
     private final double uploadSpeed;
@@ -18,10 +17,21 @@ public class TestResult {
         this.timestamp = System.currentTimeMillis();
     }
 
-    public double getDownloadSpeed() { return downloadSpeed; }
-    public double getUploadSpeed() { return uploadSpeed; }
-    public long getPing() { return ping; }
-    public long getTimestamp() { return timestamp; }
+    public double getDownloadSpeed() {
+        return downloadSpeed;
+    }
+
+    public double getUploadSpeed() {
+        return uploadSpeed;
+    }
+
+    public long getPing() {
+        return ping;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
 
     public String getFormattedTime() {
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", new Locale("uk", "UA"));

@@ -4,17 +4,24 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.telephony.TelephonyManager;
+
 import androidx.annotation.NonNull;
 
-public class NetworkAnalyzer {
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 
+public class NetworkAnalyzer {
     private final Context context;
     private ConnectivityManager.NetworkCallback networkCallback;
 
     public interface NetworkChangeListener {
-        void onNetworkChanged(String networkType);
+        void onNetworkChanged(String networkInfo);
     }
 
     public NetworkAnalyzer(Context context) {
@@ -40,14 +47,82 @@ public class NetworkAnalyzer {
         return "Невідомо";
     }
 
-    // Динамічний моніторинг стану мережі
+    public String getIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return "Невідомо";
+    }
+
+    public String getNetworkName() {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return "";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network network = cm.getActiveNetwork();
+            if (network == null) return "";
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
+            if (capabilities == null) return "";
+
+            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                if (wifiManager != null) {
+                    WifiInfo info = wifiManager.getConnectionInfo();
+                    if (info != null && info.getSSID() != null && !info.getSSID().equals(WifiManager.UNKNOWN_SSID)) {
+                        String ssid = info.getSSID().replace("\"", "");
+                        if (!ssid.equals("<unknown ssid>")) {
+                            return ssid;
+                        }
+                    }
+                }
+            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                if (telephonyManager != null) {
+                    String operatorName = telephonyManager.getNetworkOperatorName();
+                    if (operatorName != null && !operatorName.isEmpty()) {
+                        return operatorName;
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    public String getFullNetworkInfo() {
+        String type = getNetworkType();
+        if (type.equals("Немає підключення") || type.equals("Невідомо")) return type;
+
+        String name = getNetworkName();
+        String ip = getIpAddress();
+
+        StringBuilder sb = new StringBuilder(type);
+        if (!name.isEmpty()) {
+            sb.append(" (").append(name).append(")");
+        }
+        if (!ip.equals("Невідомо")) {
+            sb.append("\nIP: ").append(ip);
+        }
+        return sb.toString();
+    }
+
     public void startMonitoring(NetworkChangeListener listener) {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(@NonNull Network network) {
-                    listener.onNetworkChanged(getNetworkType());
+                    listener.onNetworkChanged(getFullNetworkInfo());
                 }
 
                 @Override
@@ -57,7 +132,7 @@ public class NetworkAnalyzer {
 
                 @Override
                 public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities networkCapabilities) {
-                    listener.onNetworkChanged(getNetworkType());
+                    listener.onNetworkChanged(getFullNetworkInfo());
                 }
             };
             cm.registerDefaultNetworkCallback(networkCallback);
@@ -71,16 +146,15 @@ public class NetworkAnalyzer {
         }
     }
 
-    // Аналіз результатів тесту
     public String generateConclusion(double downloadMbps, double uploadMbps, long pingMs) {
-        StringBuilder conclusion = new StringBuilder("Висновок: ");
+        StringBuilder conclusion = new StringBuilder();
 
         if (downloadMbps > 50 && pingMs < 50) {
-            conclusion.append("Відмінне з'єднання. Ідеально підходить для 4K відео, онлайн-ігор та відеоконференцій без затримок.");
+            conclusion.append("З'єднання відмінне. Підійде для перегляду 4K-відео, онлайн-ігор та відеоконференцій без затримок.");
         } else if (downloadMbps > 15) {
-            conclusion.append("Гарне з'єднання. Достатньо для перегляду HD відео, серфінгу та соцмереж.");
+            conclusion.append("Гарне з'єднання. Достатньо для перегляду HD-відео, серфінгу та соцмереж.");
         } else if (downloadMbps > 5) {
-            conclusion.append("Посереднє з'єднання. Можливі затримки при перегляді важких відео, але для читання новин вистачить.");
+            conclusion.append("Добре з'єднання. Можливі затримки при перегляді довгих відео, але для читання новин вистачить.");
         } else {
             conclusion.append("Слабке з'єднання. Інтернет працює дуже повільно, можливі розриви зв'язку.");
         }
