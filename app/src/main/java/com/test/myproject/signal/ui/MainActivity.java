@@ -71,16 +71,13 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, ChartsActivity.class));
         });
 
-        // Обробник для нової кнопки оновлення
         btnRefresh.setOnClickListener(v -> {
-            // Анімація обертання при натисканні
             btnRefresh.animate().rotationBy(360f).setDuration(500).start();
             resetUI();
             Toast.makeText(this, "Дані оновлено", Toast.LENGTH_SHORT).show();
         });
 
         btnStartTest.setOnClickListener(v -> {
-            // Плавна анімація натискання (Scale down & up)
             btnStartTest.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).withEndAction(() -> {
                 btnStartTest.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
                 if (isTesting) {
@@ -98,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         tvDateTime = findViewById(R.id.tvDateTime);
         btnHistory = findViewById(R.id.btnHistory);
-        btnRefresh = findViewById(R.id.btnRefresh); // Ініціалізація кнопки оновлення
+        btnRefresh = findViewById(R.id.btnRefresh);
         tvNetworkType = findViewById(R.id.tvNetworkType);
         tvCurrentSpeed = findViewById(R.id.tvCurrentSpeed);
         tvSpeedUnit = findViewById(R.id.tvSpeedUnit);
@@ -145,27 +142,24 @@ public class MainActivity extends AppCompatActivity {
         tvNetworkType.setText("Підключення: " + networkAnalyzer.getNetworkType());
     }
 
-    // Новий метод для скидання інтерфейсу
     private void resetUI() {
         if (isTesting) {
             cancelTest();
         }
 
-        // Скидання тексту
         tvPing.setText("-- мс");
         tvDownload.setText("-- Мбіт/с");
         tvUpload.setText("-- Мбіт/с");
         tvDuration.setText("0.0 с");
         tvCurrentSpeed.setText("0.0");
+        tvCurrentSpeed.setAlpha(1f);
         tvSpeedUnit.setText("Мбіт/с");
         tvTestState.setText("Очікування");
         tvConclusion.setText("Очікування початку тестування...");
 
-        // Скидання прогресу
         progressBarTest.setProgress(0);
         speedometerView.reset();
 
-        // Перевірка мережі
         updateNetworkInfo();
     }
 
@@ -181,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
         tvUpload.setText("-- Мбіт/с");
         tvDuration.setText("0.0 с");
         tvCurrentSpeed.setText("0.0");
+        tvCurrentSpeed.setAlpha(1f);
         tvSpeedUnit.setText("Мбіт/с");
         progressBarTest.setProgress(0);
         tvConclusion.setText("Тестування...");
@@ -210,14 +205,19 @@ public class MainActivity extends AppCompatActivity {
             public void onDownloadFinished(double finalMbps) {
                 finalDownload = finalMbps;
                 tvDownload.setText(String.format(Locale.US, "%.1f Мбіт/с", finalMbps));
-                speedometerView.reset();
-                tvCurrentSpeed.setText("0.0");
+
+                speedometerView.smoothReset();
+
+                tvCurrentSpeed.animate().alpha(0f).setDuration(400).withEndAction(() -> {
+                    tvCurrentSpeed.setText("0.0");
+                }).start();
             }
 
             @Override
             public void onUploadProgress(double mbps, int progressPercent) {
                 tvTestState.setText("⬆ Перевірка вивантаження...");
                 tvSpeedUnit.setText("Мбіт/с (⬆)");
+                tvCurrentSpeed.setAlpha(1f);
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
                 speedometerView.setSpeed((float) mbps);
                 progressBarTest.setProgress(50 + (progressPercent / 2));
@@ -244,7 +244,6 @@ public class MainActivity extends AppCompatActivity {
                 long ping = tvPing.getText().toString().contains("--") ? 100 : Long.parseLong(tvPing.getText().toString().split(" ")[0]);
                 tvConclusion.setText(networkAnalyzer.generateConclusion(finalDownload, finalUpload, ping));
 
-                // ЗБЕРЕЖЕННЯ РЕЗУЛЬТАТУ В ІСТОРІЮ
                 SessionData.getInstance().addResult(new TestResult(finalDownload, finalUpload, ping));
 
                 finishTestUI();
@@ -267,11 +266,18 @@ public class MainActivity extends AppCompatActivity {
         tvTestState.setText("Завершено");
         progressBarTest.setProgress(100);
 
-        speedometerView.reset();
-        tvCurrentSpeed.setText("0.0");
+        speedometerView.smoothReset();
+
+        tvCurrentSpeed.animate().alpha(0f).setDuration(400).withEndAction(() -> {
+            tvCurrentSpeed.setText("0.0");
+            tvCurrentSpeed.animate().alpha(1f).setDuration(400).start();
+        }).start();
+
         tvSpeedUnit.setText("Мбіт/с");
 
         gridResults.animate().alpha(1f).setDuration(1000).start();
+
+        tvConclusion.setAlpha(0f);
         tvConclusion.animate().alpha(1f).setDuration(1000).start();
     }
 

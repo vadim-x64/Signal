@@ -18,7 +18,7 @@ public class SpeedometerView extends View {
     private Paint backgroundArcPaint;
     private Paint tickPaint;
     private Paint needlePaint;
-    private Paint textPaint; // Додано фарбу для цифр
+    private Paint textPaint;
     private RectF arcBounds;
 
     private float currentSpeed = 0f;
@@ -28,6 +28,7 @@ public class SpeedometerView extends View {
     private final float SWEEP_ANGLE = 270f;
 
     private float centerX, centerY, radius;
+    private ValueAnimator speedAnimator;
 
     public SpeedometerView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -65,7 +66,7 @@ public class SpeedometerView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        float padding = 80f; // Збільшено для розміщення цифр
+        float padding = 100f;
         arcBounds.set(padding, padding, w - padding, h - padding);
 
         centerX = w / 2f;
@@ -84,15 +85,14 @@ public class SpeedometerView extends View {
 
         canvas.drawArc(arcBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundArcPaint);
 
-        // Покращені поділки та цифри
         int numTicks = 30;
         for (int i = 0; i <= numTicks; i++) {
             float angle = START_ANGLE + (i * SWEEP_ANGLE / numTicks);
             double rad = Math.toRadians(angle);
-            boolean isMajorTick = (i % 6 == 0); // Кожні 5 поділок (30/6 = 5 великих секцій)
+            boolean isMajorTick = (i % 6 == 0);
 
             float tickLength = isMajorTick ? 25f : 12f;
-            float startRadius = radius + 20f; // Поділки зовні дуги
+            float startRadius = radius + 20f;
 
             float startX = (float) (centerX + startRadius * Math.cos(rad));
             float startY = (float) (centerY + startRadius * Math.sin(rad));
@@ -103,16 +103,14 @@ public class SpeedometerView extends View {
             tickPaint.setColor(isMajorTick ? Color.WHITE : Color.parseColor("#66FFFFFF"));
             canvas.drawLine(startX, startY, stopX, stopY, tickPaint);
 
-            // Малюємо цифри для великих поділок
             if (isMajorTick) {
                 int speedValue = (int) ((i / (float)numTicks) * maxSpeed);
                 String text = String.valueOf(speedValue);
 
-                float textRadius = startRadius + tickLength + 25f; // Відступ для тексту
+                float textRadius = startRadius + tickLength + 32f;
                 float textX = (float) (centerX + textRadius * Math.cos(rad));
                 float textY = (float) (centerY + textRadius * Math.sin(rad));
 
-                // Корегування позиції Y, щоб текст був чітко по центру точки
                 Rect textBounds = new Rect();
                 textPaint.getTextBounds(text, 0, text.length(), textBounds);
                 textY += textBounds.height() / 2f;
@@ -121,7 +119,7 @@ public class SpeedometerView extends View {
             }
         }
 
-        float speedRatio = Math.min(currentSpeed / maxSpeed, 1f);
+        float speedRatio = Math.max(0f, Math.min(currentSpeed / maxSpeed, 1f));
         float progressAngle = SWEEP_ANGLE * speedRatio;
 
         canvas.save();
@@ -129,7 +127,6 @@ public class SpeedometerView extends View {
         canvas.drawArc(arcBounds, START_ANGLE - 90, progressAngle, false, arcPaint);
         canvas.restore();
 
-        // Малюємо стрілку
         float needleAngle = START_ANGLE + progressAngle;
         double needleRad = Math.toRadians(needleAngle);
 
@@ -158,23 +155,47 @@ public class SpeedometerView extends View {
     }
 
     public void setSpeed(float speed) {
-        if (speed > maxSpeed * 0.9f) {
+        boolean scaleChanged = false;
+        while (speed > maxSpeed * 0.9f) {
             maxSpeed *= 2f;
-            invalidate(); // Перемальовуємо шкалу з новими цифрами
+            scaleChanged = true;
         }
 
-        ValueAnimator animator = ValueAnimator.ofFloat(currentSpeed, speed);
-        animator.setDuration(250);
-        animator.setInterpolator(new DecelerateInterpolator());
-        animator.addUpdateListener(animation -> {
+        if (scaleChanged) invalidate();
+
+        if (speedAnimator != null && speedAnimator.isRunning()) {
+            speedAnimator.cancel();
+        }
+
+        speedAnimator = ValueAnimator.ofFloat(currentSpeed, speed);
+        speedAnimator.setDuration(250);
+        speedAnimator.setInterpolator(new DecelerateInterpolator());
+        speedAnimator.addUpdateListener(animation -> {
             currentSpeed = (float) animation.getAnimatedValue();
             invalidate();
         });
-        animator.start();
+        speedAnimator.start();
+    }
+
+    public void smoothReset() {
+        if (speedAnimator != null && speedAnimator.isRunning()) {
+            speedAnimator.cancel();
+        }
+
+        speedAnimator = ValueAnimator.ofFloat(currentSpeed, 0f);
+        speedAnimator.setDuration(800);
+        speedAnimator.setInterpolator(new DecelerateInterpolator());
+        speedAnimator.addUpdateListener(animation -> {
+            currentSpeed = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        speedAnimator.start();
     }
 
     public void reset() {
+        if (speedAnimator != null) speedAnimator.cancel();
         maxSpeed = 150f;
-        setSpeed(0);
+        currentSpeed = 0f;
+        invalidate();
     }
 }

@@ -5,13 +5,12 @@
     android:layout_height="match_parent"
     android:background="@drawable/gradient_background">
 
-    <!-- Ідеально симетричне розташування стрілки відносно іконки годинника з головного екрану -->
     <ImageView
         android:id="@+id/btnBack"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="0dp"
-        android:layout_marginTop="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="52dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
         android:focusable="true"
@@ -21,92 +20,114 @@
         app:layout_constraintTop_toTopOf="parent"
         app:tint="#FFFFFF" />
 
-    <!-- Заголовок відцентрований та вирівняний по вертикалі рівно з іконкою -->
     <TextView
         android:id="@+id/tvChartsTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="24dp"
         android:text="Історія тестів"
         android:textColor="#FFFFFF"
         android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/btnBack"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/btnBack"
         app:layout_constraintTop_toTopOf="@+id/btnBack" />
 
-    <!-- Скролл для самих графіків -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
+    <!-- ВИПРАВЛЕНО: Група, яка контролює видимість відразу всього блоку графіків -->
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/chartsGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="titleDownloadChart,cardDownload,titleUploadChart,cardUpload" />
+
+    <TextView
+        android:id="@+id/titleDownloadChart"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
         android:layout_marginTop="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnBack">
+        android:layout_marginBottom="8dp"
+        android:text="Завантаження (Line Chart)"
+        android:textColor="#92FE9D"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/cardDownload"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack"
+        app:layout_constraintVertical_chainStyle="spread_inside" />
 
-        <LinearLayout
+    <FrameLayout
+        android:id="@+id/cardDownload"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/card_background"
+        android:padding="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/titleUploadChart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleDownloadChart"
+        app:layout_constraintVertical_weight="1">
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/chartDownload"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Завантаження (Line Chart)"
-                android:textColor="#92FE9D"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+    <TextView
+        android:id="@+id/titleUploadChart"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="8dp"
+        android:text="Вивантаження (Bar Chart)"
+        android:textColor="#00C9FF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/cardUpload"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/cardDownload" />
 
-            <!-- Графік лінійний -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:background="@drawable/card_background"
-                android:padding="8dp">
+    <FrameLayout
+        android:id="@+id/cardUpload"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="32dp"
+        android:background="@drawable/card_background"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleUploadChart"
+        app:layout_constraintVertical_weight="1">
 
-                <com.github.mikephil.charting.charts.LineChart
-                    android:id="@+id/chartDownload"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </FrameLayout>
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/chartUpload"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"
-                android:text="Вивантаження (Bar Chart)"
-                android:textColor="#00C9FF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- Графік стовпчастий (Гістограма) -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:layout_marginBottom="32dp"
-                android:background="@drawable/card_background"
-                android:padding="8dp">
-
-                <com.github.mikephil.charting.charts.BarChart
-                    android:id="@+id/chartUpload"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/tvNoData"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="50dp"
-                android:gravity="center"
-                android:text="Історія порожня. Зробіть тест!"
-                android:textColor="#B3FFFFFF"
-                android:textSize="18sp"
-                android:visibility="gone" />
-
-        </LinearLayout>
-    </ScrollView>
+    <!-- Текст тепер не накладається, бо вся група вище сховається -->
+    <TextView
+        android:id="@+id/tvNoData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Історія порожня.\nЗробіть тест!"
+        android:textColor="#B3FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

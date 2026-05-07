@@ -7,6 +7,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.Group;
 
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
@@ -30,6 +31,7 @@ public class ChartsActivity extends AppCompatActivity {
     private LineChart chartDownload;
     private BarChart chartUpload;
     private TextView tvNoData;
+    private Group chartsGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +44,7 @@ public class ChartsActivity extends AppCompatActivity {
         chartDownload = findViewById(R.id.chartDownload);
         chartUpload = findViewById(R.id.chartUpload);
         tvNoData = findViewById(R.id.tvNoData);
+        chartsGroup = findViewById(R.id.chartsGroup); // Підключили групу
 
         loadChartsData();
     }
@@ -50,11 +53,14 @@ public class ChartsActivity extends AppCompatActivity {
         List<TestResult> history = SessionData.getInstance().getHistory();
 
         if (history.isEmpty()) {
-            chartDownload.setVisibility(View.GONE);
-            chartUpload.setVisibility(View.GONE);
+            // ВИПРАВЛЕНО: Ховаємо відразу всю групу (заголовки + сірі фони + графіки)
+            chartsGroup.setVisibility(View.GONE);
             tvNoData.setVisibility(View.VISIBLE);
             return;
         }
+
+        chartsGroup.setVisibility(View.VISIBLE);
+        tvNoData.setVisibility(View.GONE);
 
         setupLineChart(history);
         setupBarChart(history);
@@ -86,7 +92,6 @@ public class ChartsActivity extends AppCompatActivity {
         LineData lineData = new LineData(dataSet);
         chartDownload.setData(lineData);
 
-        // Налаштування осей
         chartDownload.getDescription().setEnabled(false);
         chartDownload.getLegend().setTextColor(Color.WHITE);
         chartDownload.getAxisRight().setEnabled(false);
@@ -120,7 +125,6 @@ public class ChartsActivity extends AppCompatActivity {
         dataSet.setValueTextSize(10f);
 
         BarData barData = new BarData(dataSet);
-        // Зробимо стовпчики трохи вужчими для краси
         barData.setBarWidth(0.6f);
 
         chartUpload.setData(barData);

@@ -24,7 +24,6 @@ public class SpeedTester {
     private final Handler mainHandler;
     private boolean isCancelled = false;
 
-    // Внутрішній клас для розрахунку Rolling Average (Ковзного середнього)
     private static class SpeedDataPoint {
         long timestamp;
         long bytes;
@@ -69,7 +68,7 @@ public class SpeedTester {
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
-        String url = "https://speed.cloudflare.com/__down?bytes=50000000"; // 50MB для кращого тесту
+        String url = "https://speed.cloudflare.com/__down?bytes=50000000";
         Request request = new Request.Builder().url(url).build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -89,7 +88,7 @@ public class SpeedTester {
                 mainHandler.post(() -> callback.onPingResult(pingMs));
 
                 InputStream is = response.body().byteStream();
-                byte[] buffer = new byte[16384]; // Більший буфер
+                byte[] buffer = new byte[16384];
 
                 long totalBytesRead = 0;
                 long startTime = System.currentTimeMillis();
@@ -105,12 +104,10 @@ public class SpeedTester {
 
                     rollingWindow.add(new SpeedDataPoint(currentTime, totalBytesRead));
 
-                    // Видаляємо дані старіші за 1 секунду
                     while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
                         rollingWindow.removeFirst();
                     }
 
-                    // Оновлюємо UI кожні 200 мс
                     if (currentTime - lastReportTime >= 200) {
                         if (rollingWindow.size() > 1) {
                             SpeedDataPoint oldest = rollingWindow.getFirst();
@@ -121,12 +118,11 @@ public class SpeedTester {
 
                             if (deltaSec > 0) {
                                 double instantSpeed = ((deltaBytes * 8.0) / 1_000_000.0) / deltaSec;
-                                // Легке згладжування виключно для візуальної плавності стрілки
                                 displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.7 + instantSpeed * 0.3);
                             }
                         }
 
-                        int progress = (int) ((totalBytesRead * 100) / 50000000); // Відсоток від 50МБ
+                        int progress = (int) ((totalBytesRead * 100) / 50000000);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onDownloadProgress(reportSpeed, Math.min(progress, 100)));
 
@@ -136,13 +132,13 @@ public class SpeedTester {
                 is.close();
                 response.close();
 
-                // Реальна фінальна швидкість = весь об'єм поділений на весь час (найнадійніший метод)
                 double totalTimeSec = (System.currentTimeMillis() - startTime) / 1000.0;
                 double exactFinalSpeed = ((totalBytesRead * 8.0) / 1_000_000.0) / totalTimeSec;
 
                 mainHandler.post(() -> {
                     callback.onDownloadFinished(exactFinalSpeed);
-                    onComplete.run();
+                    // Пауза 1 секунда між тестами для красивого падіння стрілки
+                    mainHandler.postDelayed(onComplete, 1000);
                 });
             }
         });
@@ -150,9 +146,8 @@ public class SpeedTester {
 
     private void runUploadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__up";
-        final long totalBytes = 20000000; // 20MB для тесту вивантаження
+        final long totalBytes = 20000000;
 
-        // Створюємо кастомний RequestBody, який записує дані шматками (chunks)
         RequestBody requestBody = new RequestBody() {
             @Override
             public MediaType contentType() {
@@ -166,8 +161,8 @@ public class SpeedTester {
 
             @Override
             public void writeTo(BufferedSink sink) throws IOException {
-                byte[] chunk = new byte[65536]; // 64KB буфер
-                new Random().nextBytes(chunk); // Генеруємо сміття один раз для швидкодії
+                byte[] chunk = new byte[65536];
+                new Random().nextBytes(chunk);
 
                 long bytesWritten = 0;
                 long startTime = System.currentTimeMillis();
@@ -179,7 +174,7 @@ public class SpeedTester {
                 while (bytesWritten < totalBytes && !isCancelled) {
                     long toWrite = Math.min(chunk.length, totalBytes - bytesWritten);
                     sink.write(chunk, 0, (int) toWrite);
-                    sink.flush(); // Примусово відправляємо в мережу, щоб UI міг фіксувати прогрес поступово
+                    sink.flush();
 
                     bytesWritten += toWrite;
                     long currentTime = System.currentTimeMillis();
