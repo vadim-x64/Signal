@@ -19,12 +19,21 @@ public class LiquidButtonView extends View {
     private Paint textPaint;
     private Paint glossPaint;
     private Paint borderPaint;
+    private Paint ringPaint;
     private Path path;
     private RectF glossRect;
+
     private boolean isTesting = false;
     private float animationTime = 0f;
     private ValueAnimator liquidAnimator;
     private ValueAnimator colorAnimator;
+    private ValueAnimator pulseAnimator;
+
+    private float pulseRadius = 0f;
+    private int pulseAlpha = 0;
+    private float pulseRadius2 = 0f;
+    private int pulseAlpha2 = 0;
+
     private String buttonText = "СТАРТ";
     private int startColor = Color.parseColor("#00C9FF");
     private int endColor = Color.parseColor("#0083B0");
@@ -41,19 +50,29 @@ public class LiquidButtonView extends View {
     private void init() {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.FILL);
+
         textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setFakeBoldText(true);
         textPaint.setTextSize(60f);
         textPaint.setShadowLayer(4f, 0f, 2f, Color.parseColor("#66000000"));
+
         glossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         glossPaint.setStyle(Paint.Style.FILL);
+
         borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(4f);
+
+        ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ringPaint.setStyle(Paint.Style.STROKE);
+        ringPaint.setStrokeWidth(3f);
+        ringPaint.setColor(Color.parseColor("#00C9FF"));
+
         path = new Path();
         glossRect = new RectF();
+
         liquidAnimator = ValueAnimator.ofFloat(0f, (float) (Math.PI * 2));
         liquidAnimator.setDuration(3000);
         liquidAnimator.setRepeatCount(ValueAnimator.INFINITE);
@@ -65,6 +84,27 @@ public class LiquidButtonView extends View {
 
         colorAnimator = ValueAnimator.ofFloat(0f, 1f);
         colorAnimator.setDuration(400);
+
+        pulseAnimator = ValueAnimator.ofFloat(0f, 1f);
+        pulseAnimator.setDuration(2500);
+        pulseAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        pulseAnimator.setInterpolator(new LinearInterpolator());
+        pulseAnimator.addUpdateListener(animation -> {
+            float fraction = (float) animation.getAnimatedValue();
+            float maxRadius = Math.min(getWidth(), getHeight()) / 2f;
+            float baseRadius = maxRadius * 0.7f;
+
+            pulseRadius = baseRadius + (maxRadius - baseRadius) * fraction;
+            pulseAlpha = (int) (255 * (1f - fraction));
+
+            float fraction2 = (fraction + 0.5f) % 1.0f;
+            pulseRadius2 = baseRadius + (maxRadius - baseRadius) * fraction2;
+            pulseAlpha2 = (int) (255 * (1f - fraction2));
+
+            invalidate();
+        });
+
+        pulseAnimator.start();
     }
 
     @Override
@@ -84,12 +124,11 @@ public class LiquidButtonView extends View {
                 lightX, lightY, radius,
                 startColor, endColor, Shader.TileMode.CLAMP
         );
-
         paint.setShader(radialGradient);
 
         float centerX = w / 2f;
         float centerY = h / 2f;
-        float baseRadius = Math.min(centerX, centerY) - 20f;
+        float baseRadius = Math.min(centerX, centerY) * 0.7f;
 
         glossRect.set(
                 centerX - baseRadius * 0.65f,
@@ -104,7 +143,6 @@ public class LiquidButtonView extends View {
                 Color.parseColor("#00FFFFFF"),
                 Shader.TileMode.CLAMP
         );
-
         glossPaint.setShader(glossGradient);
 
         LinearGradient borderGradient = new LinearGradient(
@@ -114,7 +152,6 @@ public class LiquidButtonView extends View {
                 new float[]{0f, 0.5f, 1f},
                 Shader.TileMode.CLAMP
         );
-
         borderPaint.setShader(borderGradient);
     }
 
@@ -123,10 +160,17 @@ public class LiquidButtonView extends View {
         super.onDraw(canvas);
         float centerX = getWidth() / 2f;
         float centerY = getHeight() / 2f;
-        float baseRadius = Math.min(centerX, centerY) - 20f;
+        float baseRadius = Math.min(centerX, centerY) * 0.7f;
+
+        if (!isTesting) {
+            ringPaint.setAlpha(pulseAlpha);
+            canvas.drawCircle(centerX, centerY, pulseRadius, ringPaint);
+
+            ringPaint.setAlpha(pulseAlpha2);
+            canvas.drawCircle(centerX, centerY, pulseRadius2, ringPaint);
+        }
 
         path.reset();
-
         int numPoints = 60;
 
         for (int i = 0; i <= numPoints; i++) {
@@ -176,12 +220,14 @@ public class LiquidButtonView extends View {
             targetStartColor = TEST_START_COLOR;
             targetEndColor = TEST_END_COLOR;
             liquidAnimator.start();
+            pulseAnimator.cancel();
         } else {
             buttonText = "СТАРТ";
             targetStartColor = IDLE_START_COLOR;
             targetEndColor = IDLE_END_COLOR;
             liquidAnimator.cancel();
             animationTime = 0f;
+            pulseAnimator.start();
         }
 
         final int currentStartColor = startColor;

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -29,13 +30,16 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private TextView tvNetworkType, tvCurrentSpeed, tvTestState, tvSpeedUnit;
     private TextView tvPing, tvDownload, tvUpload, tvDuration, tvConclusion, tvDateTime;
+    private TextView tvServerLocation;
     private ProgressBar progressBarTest;
     private ImageView btnHistory, btnRefresh;
     private LiquidButtonView btnStartTest;
     private SpeedometerView speedometerView;
+    private ConnectionFlowView connectionFlowView;
     private GridLayout gridResults;
     private NetworkAnalyzer networkAnalyzer;
     private SpeedTester speedTester;
+
     private boolean isTesting = false;
     private Handler clockHandler;
     private Runnable clockRunnable;
@@ -91,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
 
         gridResults.setAlpha(0f);
         gridResults.animate().alpha(1f).setDuration(1500).start();
+        connectionFlowView.setState(ConnectionFlowView.State.IDLE);
     }
 
     private void initViews() {
@@ -110,6 +115,10 @@ public class MainActivity extends AppCompatActivity {
         btnStartTest = findViewById(R.id.btnStartTest);
         speedometerView = findViewById(R.id.speedometerView);
         gridResults = findViewById(R.id.gridResults);
+
+        connectionFlowView = findViewById(R.id.connectionFlowView);
+        tvServerLocation = findViewById(R.id.tvServerLocation);
+
         durationHandler = new Handler(Looper.getMainLooper());
 
         durationRunnable = new Runnable() {
@@ -157,6 +166,10 @@ public class MainActivity extends AppCompatActivity {
         tvSpeedUnit.setText("Мбіт/с");
         tvTestState.setText("Очікування");
         tvConclusion.setText("Очікування початку тестування...");
+        tvServerLocation.setText("Сервер: Очікування...");
+        tvServerLocation.setVisibility(View.GONE);
+        connectionFlowView.setVisibility(View.GONE);
+        connectionFlowView.setState(ConnectionFlowView.State.IDLE);
         progressBarTest.setProgress(0);
         speedometerView.reset();
         updateNetworkInfo();
@@ -175,6 +188,13 @@ public class MainActivity extends AppCompatActivity {
         tvCurrentSpeed.setAlpha(1f);
         tvSpeedUnit.setText("Мбіт/с");
         progressBarTest.setProgress(0);
+
+        tvServerLocation.setText("Пошук оптимального сервера...");
+        tvServerLocation.setVisibility(View.VISIBLE);
+        connectionFlowView.setVisibility(View.VISIBLE);
+        connectionFlowView.setAlpha(0f);
+        connectionFlowView.animate().alpha(1f).setDuration(500).start();
+
         tvConclusion.setText("Тестування...");
         testStartTime = System.currentTimeMillis();
         durationHandler.post(durationRunnable);
@@ -183,6 +203,17 @@ public class MainActivity extends AppCompatActivity {
 
         speedTester.startFullTest(new SpeedTester.SpeedTestCallback() {
             @Override
+            public void onServerInfo(String location, String ip) {
+                tvServerLocation.setText("Сервер: " + location + " (IP: " + ip + ")");
+            }
+
+            @Override
+            public void onHandshakeStart() {
+                tvTestState.setText("Встановлення з'єднання...");
+                connectionFlowView.setState(ConnectionFlowView.State.HANDSHAKE);
+            }
+
+            @Override
             public void onPingResult(long pingMs) {
                 tvPing.setText(pingMs + " мс");
             }
@@ -190,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDownloadProgress(double mbps, int progressPercent) {
                 tvTestState.setText("Перевірка завантаження...");
+                connectionFlowView.setState(ConnectionFlowView.State.DOWNLOADING);
                 tvSpeedUnit.setText("Мбіт/с");
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
                 speedometerView.setSpeed((float) mbps);
@@ -210,6 +242,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onUploadProgress(double mbps, int progressPercent) {
                 tvTestState.setText("Перевірка вивантаження...");
+                connectionFlowView.setState(ConnectionFlowView.State.UPLOADING);
                 tvSpeedUnit.setText("Мбіт/с");
                 tvCurrentSpeed.setAlpha(1f);
                 tvCurrentSpeed.setText(String.format(Locale.US, "%.1f", mbps));
@@ -255,6 +288,7 @@ public class MainActivity extends AppCompatActivity {
         btnStartTest.setTestingState(false);
         durationHandler.removeCallbacks(durationRunnable);
         tvTestState.setText("Завершено");
+        connectionFlowView.setState(ConnectionFlowView.State.IDLE);
         progressBarTest.setProgress(100);
         speedometerView.smoothReset();
 
@@ -267,6 +301,11 @@ public class MainActivity extends AppCompatActivity {
         gridResults.animate().alpha(1f).setDuration(1000).start();
         tvConclusion.setAlpha(0f);
         tvConclusion.animate().alpha(1f).setDuration(1000).start();
+
+        connectionFlowView.animate().alpha(0f).setDuration(1000).withEndAction(() -> {
+            connectionFlowView.setVisibility(View.GONE);
+            tvServerLocation.setVisibility(View.GONE);
+        }).start();
     }
 
     @Override

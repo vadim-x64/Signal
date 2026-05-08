@@ -3,9 +3,10 @@ package com.test.myproject.signal.network;
 import android.os.Handler;
 import android.os.Looper;
 
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -23,37 +24,32 @@ public class SpeedTester {
     private final Handler mainHandler;
     private boolean isCancelled = false;
 
-    private static class SpeedDataPoint {
-        long timestamp;
-        long bytes;
-
-        SpeedDataPoint(long t, long b) {
-            timestamp = t;
-            bytes = b;
-        }
-    }
-
     public interface SpeedTestCallback {
+        void onServerInfo(String location, String ip);
+        void onHandshakeStart();
         void onPingResult(long pingMs);
-
         void onDownloadProgress(double mbps, int progressPercent);
-
         void onDownloadFinished(double finalMbps);
-
         void onUploadProgress(double mbps, int progressPercent);
-
         void onUploadFinished(double finalMbps);
-
         void onError(String error);
-
         void onFinished(long totalDurationMs);
     }
 
     public SpeedTester() {
         client = new OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(false)
+                .addInterceptor(chain -> {
+                    okhttp3.Request original = chain.request();
+                    okhttp3.Request request = original.newBuilder()
+                            .header("User-Agent", "Mozilla/5.0 (Android 14; Mobile; rv:125.0) Gecko/125.0 Firefox/125.0")
+                            .header("Accept", "*/*")
+                            .build();
+                    return chain.proceed(request);
+                })
                 .build();
         mainHandler = new Handler(Looper.getMainLooper());
     }
@@ -67,18 +63,82 @@ public class SpeedTester {
         isCancelled = false;
         long globalStartTime = System.currentTimeMillis();
 
-        runDownloadTest(callback, () -> {
+        mainHandler.post(callback::onHandshakeStart);
+
+        fetchServerMeta(callback, () -> {
             if (isCancelled) return;
-            runUploadTest(callback, () -> {
-                long totalTime = System.currentTimeMillis() - globalStartTime;
-                mainHandler.post(() -> callback.onFinished(totalTime));
+            runPingTest(callback, () -> {
+                if (isCancelled) return;
+                runDownloadTest(callback, () -> {
+                    if (isCancelled) return;
+                    runUploadTest(callback, () -> {
+                        long totalTime = System.currentTimeMillis() - globalStartTime;
+                        mainHandler.post(() -> callback.onFinished(totalTime));
+                    });
+                });
             });
+        });
+    }
+
+    private void fetchServerMeta(SpeedTestCallback callback, Runnable onComplete) {
+        Request request = new Request.Builder().url("https://speed.cloudflare.com/meta").build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                mainHandler.post(() -> callback.onServerInfo("Невідомий сервер", "---"));
+                onComplete.run();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String jsonStr = response.body().string();
+                        JSONObject json = new JSONObject(jsonStr);
+                        String city = json.optString("city", "Невідомо");
+                        String country = json.optString("country", "");
+                        String ip = json.optString("clientIp", "");
+                        String colo = json.optString("colo", "");
+
+                        String location = city + (country.isEmpty() ? "" : ", " + country) + " (" + colo + ")";
+                        mainHandler.post(() -> callback.onServerInfo(location, ip));
+                    } catch (Exception e) {
+                        mainHandler.post(() -> callback.onServerInfo("Невідомий сервер", "---"));
+                    }
+                }
+                response.close();
+                onComplete.run();
+            }
+        });
+    }
+
+    private void runPingTest(SpeedTestCallback callback, Runnable onComplete) {
+        Request request = new Request.Builder().url("https://speed.cloudflare.com/cdn-cgi/trace").build();
+        long startPingTime = System.currentTimeMillis();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                if (!isCancelled) mainHandler.post(() -> callback.onError("Помилка Ping: " + e.getMessage()));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) {
+                long pingMs = System.currentTimeMillis() - startPingTime;
+                response.close();
+                mainHandler.post(() -> {
+                    callback.onPingResult(pingMs);
+                    onComplete.run();
+                });
+            }
         });
     }
 
     private void runDownloadTest(SpeedTestCallback callback, Runnable onComplete) {
         String url = "https://speed.cloudflare.com/__down?bytes=50000000";
-        Request request = new Request.Builder().url(url).build();
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Cache-Control", "no-cache")
+                .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -94,59 +154,43 @@ public class SpeedTester {
                     return;
                 }
 
-                long pingMs = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
-                mainHandler.post(() -> callback.onPingResult(pingMs));
-
                 InputStream is = response.body().byteStream();
-
-                byte[] buffer = new byte[16384];
+                byte[] buffer = new byte[128 * 1024];
                 long totalBytesRead = 0;
-                long startTime = System.currentTimeMillis();
-                long lastReportTime = startTime;
+                long targetBytes = 50000000;
 
-                LinkedList<SpeedDataPoint> rollingWindow = new LinkedList<>();
-
+                long startTimeNano = System.nanoTime();
+                long lastReportTimeNano = startTimeNano;
                 double displaySpeed = 0;
+
                 int bytesRead;
 
                 while ((bytesRead = is.read(buffer)) != -1 && !isCancelled) {
                     totalBytesRead += bytesRead;
-                    long currentTime = System.currentTimeMillis();
-                    rollingWindow.add(new SpeedDataPoint(currentTime, totalBytesRead));
+                    long currentTimeNano = System.nanoTime();
 
-                    while (!rollingWindow.isEmpty() && currentTime - rollingWindow.getFirst().timestamp > 1000) {
-                        rollingWindow.removeFirst();
-                    }
-
-                    if (currentTime - lastReportTime >= 200) {
-                        if (rollingWindow.size() > 1) {
-                            SpeedDataPoint oldest = rollingWindow.getFirst();
-                            SpeedDataPoint newest = rollingWindow.getLast();
-
-                            double deltaSec = (newest.timestamp - oldest.timestamp) / 1000.0;
-                            long deltaBytes = newest.bytes - oldest.bytes;
-
-                            if (deltaSec > 0) {
-                                double instantSpeed = ((deltaBytes * 8.0) / 1_000_000.0) / deltaSec;
-                                displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.7 + instantSpeed * 0.3);
-                            }
+                    if (currentTimeNano - lastReportTimeNano >= 150_000_000L) {
+                        double deltaSec = (currentTimeNano - startTimeNano) / 1_000_000_000.0;
+                        if (deltaSec > 0.1) {
+                            double instantSpeed = ((totalBytesRead * 8.0) / 1_000_000.0) / deltaSec;
+                            displaySpeed = displaySpeed == 0 ? instantSpeed : (displaySpeed * 0.8 + instantSpeed * 0.2);
                         }
 
-                        int progress = (int) ((totalBytesRead * 100) / 50000000);
+                        int progress = (int) ((totalBytesRead * 100) / targetBytes);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onDownloadProgress(reportSpeed, Math.min(progress, 100)));
-                        lastReportTime = currentTime;
+                        lastReportTimeNano = currentTimeNano;
                     }
                 }
                 is.close();
                 response.close();
 
-                double totalTimeSec = (System.currentTimeMillis() - startTime) / 1000.0;
+                double totalTimeSec = (System.nanoTime() - startTimeNano) / 1_000_000_000.0;
                 double exactFinalSpeed = ((totalBytesRead * 8.0) / 1_000_000.0) / totalTimeSec;
 
                 mainHandler.post(() -> {
                     callback.onDownloadFinished(exactFinalSpeed);
-                    mainHandler.postDelayed(onComplete, 1000);
+                    mainHandler.postDelayed(onComplete, 500);
                 });
             }
         });
@@ -156,7 +200,7 @@ public class SpeedTester {
         String url = "https://speed.cloudflare.com/__up";
 
         final long[] finalBytesWritten = {0};
-        final long[] finalTimeMs = {0};
+        final long[] finalTimeNano = {0};
 
         RequestBody requestBody = new RequestBody() {
             @Override
@@ -175,39 +219,42 @@ public class SpeedTester {
                 new Random().nextBytes(chunk);
 
                 long bytesWritten = 0;
-                long startTime = System.currentTimeMillis();
-                long testDurationMs = 8000;
-                long lastReportTime = startTime;
+                long startTimeNano = System.nanoTime();
+                long testDurationNano = 8_000_000_000L;
+                long lastReportTimeNano = startTimeNano;
                 double displaySpeed = 0;
 
-                while (System.currentTimeMillis() - startTime < testDurationMs && !isCancelled) {
+                while ((System.nanoTime() - startTimeNano) < testDurationNano && !isCancelled) {
                     sink.write(chunk);
                     sink.flush();
                     bytesWritten += chunk.length;
 
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastReportTime >= 250) {
-                        double totalTimeSec = (currentTime - startTime) / 1000.0;
+                    long currentTimeNano = System.nanoTime();
+                    if (currentTimeNano - lastReportTimeNano >= 150_000_000L) {
+                        double totalTimeSec = (currentTimeNano - startTimeNano) / 1_000_000_000.0;
 
-                        if (totalTimeSec > 0.3) {
+                        if (totalTimeSec > 0.2) {
                             double currentSpeed = ((bytesWritten * 8.0) / 1_000_000.0) / totalTimeSec;
                             displaySpeed = displaySpeed == 0 ? currentSpeed : (displaySpeed * 0.8 + currentSpeed * 0.2);
                         }
 
-                        int progress = (int) (((currentTime - startTime) * 100) / testDurationMs);
+                        int progress = (int) (((currentTimeNano - startTimeNano) * 100) / testDurationNano);
                         final double reportSpeed = displaySpeed;
                         mainHandler.post(() -> callback.onUploadProgress(reportSpeed, Math.min(progress, 100)));
-                        lastReportTime = currentTime;
+                        lastReportTimeNano = currentTimeNano;
                     }
                 }
 
                 finalBytesWritten[0] = bytesWritten;
-                finalTimeMs[0] = System.currentTimeMillis() - startTime;
+                finalTimeNano[0] = System.nanoTime() - startTimeNano;
             }
         };
 
-        final long testStartTime = System.currentTimeMillis();
-        Request request = new Request.Builder().url(url).post(requestBody).build();
+        Request request = new Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .header("Cache-Control", "no-cache")
+                .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -215,21 +262,21 @@ public class SpeedTester {
                 if (!isCancelled && !e.getMessage().contains("Canceled") && !e.getMessage().contains("Socket closed")) {
                     mainHandler.post(() -> callback.onError("Помилка вивантаження: " + e.getMessage()));
                 } else if (!isCancelled) {
-                    reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeMs[0]);
+                    reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeNano[0]);
                 }
             }
 
             @Override
             public void onResponse(Call call, Response response) {
                 response.close();
-                reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeMs[0]);
+                reportFinalUpload(callback, onComplete, finalBytesWritten[0], finalTimeNano[0]);
             }
         });
     }
 
-    private void reportFinalUpload(SpeedTestCallback callback, Runnable onComplete, long bytes, long timeMs) {
-        if (timeMs == 0) timeMs = 1;
-        double exactFinalSpeed = ((bytes * 8.0) / 1_000_000.0) / (timeMs / 1000.0);
+    private void reportFinalUpload(SpeedTestCallback callback, Runnable onComplete, long bytes, long timeNano) {
+        if (timeNano == 0) timeNano = 1;
+        double exactFinalSpeed = ((bytes * 8.0) / 1_000_000.0) / (timeNano / 1_000_000_000.0);
         mainHandler.post(() -> {
             callback.onUploadFinished(exactFinalSpeed);
             onComplete.run();
